@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
-import '../widgets/customeTextAndBtns/custome_elevated_btn.dart';
-import '../widgets/customeTextAndBtns/custome_text.dart';
-import '../widgets/forms/email_form.dart';
-import '../widgets/forms/password_form.dart';
+import '../widgets/CustomeTextAndBtns/custome_elevated_btn.dart';
+import '../widgets/CustomeTextAndBtns/custome_text.dart';
+import '../widgets/CustomeForms/email_form.dart';
+import '../widgets/CustomeForms/password_form.dart';
 import 'home_screen.dart';
 
 class SignupScreen extends StatefulWidget {

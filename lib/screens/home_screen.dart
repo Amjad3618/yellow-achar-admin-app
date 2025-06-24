@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:yellow_admin/widgets/customeTextAndBtns/custome_elevated_btn.dart';
-import 'package:yellow_admin/widgets/customeTextAndBtns/custome_text.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:yellow_admin/screens/categories_screen.dart';
+import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_elevated_btn.dart';
+import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_text.dart';
 
 import '../Utils/colors.dart';
 
@@ -60,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 CustomElevatedButton(
                   onPressed: () {
                     // Handle order button press
+                    Get.to(CategoriesScreen());
                   },
                   text: "Add Categories",
                   backgroundColor: AppColors.primaryColor,
