@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/product_controller.dart';
-import '../models/product_model.dart'; // Import your ProductModel
 
 class ProductsScreen extends StatelessWidget {
   const ProductsScreen({super.key});
