@@ -20,7 +20,7 @@ class CategoriesScreen extends StatelessWidget {
         centerTitle: true,
         title: CustomText(
           "Categories",
-          fontSize: 20,
+          fontSize: 30,
           fontWeight: FontWeight.bold,
         ),
         actions: [

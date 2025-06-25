@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
+import 'package:yellow_admin/screens/add_products_screen.dart';
 import 'package:yellow_admin/screens/categories_screen.dart';
 import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_elevated_btn.dart';
 import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_text.dart';
@@ -16,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-    final AuthController authController = Get.find<AuthController>();
+  final AuthController authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -26,61 +27,67 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(onPressed: (){
-authController.signOut();
-          }, icon: Icon(Icons.logout))
+          IconButton(
+            onPressed: () {
+              authController.signOut();
+            },
+            icon: Icon(Icons.logout),
+          ),
         ],
       ),
       body: Container(
         height: MediaQuery.of(context).size.height * 0.8,
         width: double.infinity,
+        
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                CustomElevatedButton(
-                  onPressed: () {
-                    // Handle order button press
-                  },
-                  text: "Ckeck Order",
-                  backgroundColor: AppColors.primaryColor,
-                ),
-                CustomElevatedButton(
-                  onPressed: () {
-                    // Handle order button press
-                  },
-                  text: "Add Products",
-                ),
-              ],
-            ),
-            SizedBox(height: 15,),
-            Divider(),
-                        SizedBox(height: 15,),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                CustomElevatedButton(
-                  onPressed: () {
-                    // Handle order button press
-                  },
-                  text: "Add Banners",
-                ),
-                CustomElevatedButton(
-                  onPressed: () {
-                    // Handle order button press
-                    Get.to(CategoriesScreen());
-                  },
-                  text: "Add Categories",
-                  backgroundColor: AppColors.primaryColor,
-                ),
-                
-              ],
-            ),
-
-          ],
+        child: Center(
+          child: Column(
+            children: [
+              SizedBox(height: 50,),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  CustomElevatedButton(
+                    onPressed: () {
+                      // Handle order button press
+                    },
+                    text: "Ckeck Order",
+                    backgroundColor: AppColors.primaryColor,
+                  ),
+                  CustomElevatedButton(
+                    onPressed: () {
+                      // Handle order button press
+                      Get.to(ProductsScreen());
+                    },
+                    text: "Add Products",
+                  ),
+                ],
+              ),
+              SizedBox(height: 15),
+              Divider(),
+              SizedBox(height: 15),
+          
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  CustomElevatedButton(
+                    onPressed: () {
+                      // Handle order button press
+                    },
+                    text: "Add Banners",
+                  ),
+                  CustomElevatedButton(
+                    onPressed: () {
+                      // Handle order button press
+                      Get.to(CategoriesScreen());
+                    },
+                    text: "Add Categories",
+                    backgroundColor: AppColors.primaryColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
