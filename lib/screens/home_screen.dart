@@ -6,6 +6,7 @@ import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_elevated_btn.dar
 import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_text.dart';
 
 import '../Utils/colors.dart';
+import '../controllers/auth_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+    final AuthController authController = Get.find<AuthController>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,6 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
         title: CustomText("HOME", fontWeight: FontWeight.bold),
         centerTitle: true,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(onPressed: (){
+authController.signOut();
+          }, icon: Icon(Icons.logout))
+        ],
       ),
       body: Container(
         height: MediaQuery.of(context).size.height * 0.8,
