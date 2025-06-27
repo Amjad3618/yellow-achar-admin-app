@@ -8,6 +8,7 @@ import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_text.dart';
 
 import '../Utils/colors.dart';
 import '../controllers/auth_controller.dart';
+import 'banner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,12 +39,12 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Container(
         height: MediaQuery.of(context).size.height * 0.8,
         width: double.infinity,
-        
+
         padding: const EdgeInsets.all(16.0),
         child: Center(
           child: Column(
             children: [
-              SizedBox(height: 50,),
+              SizedBox(height: 50),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -66,13 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 15),
               Divider(),
               SizedBox(height: 15),
-          
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   CustomElevatedButton(
                     onPressed: () {
                       // Handle order button press
+                      Get.to(BannerScreen());
                     },
                     text: "Add Banners",
                   ),
