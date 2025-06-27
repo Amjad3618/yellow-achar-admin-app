@@ -12,7 +12,7 @@ class ProductsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Products'),
+        title: const Text('Manage Products', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

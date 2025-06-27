@@ -17,9 +17,7 @@ class _BannerScreenState extends State<BannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Banner Management'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: Text('Banner Management', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
         elevation: 0,
       ),
       body: Obx(() {
