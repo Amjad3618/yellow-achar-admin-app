@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/product_controller.dart';
 
-class ProductsScreen extends StatelessWidget {
+class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
 
+  @override
+  State<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     final ProductController productController = Get.put(ProductController());
@@ -96,11 +101,10 @@ class ProductsScreen extends StatelessWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              Text(
-                                'Category: ${product.category}', // You might want to resolve category name from ID
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[700]),
-                              ),
+                             Text(
+  'Category: ${productController.getCategoryNameFromList(product.category)}',
+  style: const TextStyle(fontSize: 14, color: Colors.grey),
+),
                               Text(
                                 'Price: \$${product.price.toStringAsFixed(2)}',
                                 style: const TextStyle(fontSize: 16),

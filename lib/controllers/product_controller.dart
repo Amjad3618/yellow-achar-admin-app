@@ -49,6 +49,8 @@ class ProductController extends GetxController {
   // --- For Categories dropdowns (optional, but good for UX) ---
   final RxList<CategoryModel> categories = <CategoryModel>[].obs; // To populate category dropdown
   final RxList<CategoryModel> subCategoriesForSelectedCategory = <CategoryModel>[].obs;
+  final Map<String, String> _categoryCache = {};
+
 
   @override
   void onInit() {
@@ -74,7 +76,44 @@ class ProductController extends GetxController {
   }
 
   // --- Data Fetching ---
+Future<String> getCategoryName(String categoryId) async {
+  // Check if already cached
+  if (_categoryCache.containsKey(categoryId)) {
+    return _categoryCache[categoryId]!;
+  }
 
+  try {
+    // Fetch from Firestore
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('categories')
+        .doc(categoryId)
+        .get();
+    
+    if (doc.exists) {
+      String categoryName = doc.data() as String;['name'];
+      _categoryCache[categoryId] = categoryName;
+      return categoryName;
+    } else {
+      _categoryCache[categoryId] = 'Unknown Category';
+      return 'Unknown Category';
+    }
+  } catch (e) {
+    print('Error fetching category: $e');
+    _categoryCache[categoryId] = 'Unknown Category';
+    return 'Unknown Category';
+  }
+}
+
+// Alternative method if you have a categories list in memory
+String getCategoryNameFromList(String categoryId) {
+  // Assuming you have a categories list in your controller
+  try {
+    final category = categories.firstWhere((cat) => cat.id == categoryId);
+    return category.name;
+  } catch (e) {
+    return 'Unknown Category';
+  }
+}
   Future<void> fetchProducts() async {
     try {
       isLoading.value = true;
