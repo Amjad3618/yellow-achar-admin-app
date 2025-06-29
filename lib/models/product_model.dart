@@ -8,10 +8,9 @@ class ProductModel {
   double? discountPrice;
   int stock;
   String category;
-  String subCategory;
-  String brand;
+  String categoryname;
+
   List<String> images;
-  List<String> tags;
   bool isActive;
   bool isFeatured;
   bool isOnSale;
@@ -22,8 +21,6 @@ class ProductModel {
   double rating;
   int reviewCount;
   String sku; // Stock Keeping Unit
-  double weight;
-  Map<String, String> dimensions; // height, width, length
   String status; // draft, published, archived
 
   ProductModel({
@@ -34,10 +31,10 @@ class ProductModel {
     this.discountPrice,
     required this.stock,
     required this.category,
-    this.subCategory = '',
-    this.brand = '',
+    required this.categoryname,
+    
     this.images = const [],
-    this.tags = const [],
+  
     this.isActive = true,
     this.isFeatured = false,
     this.isOnSale = false,
@@ -48,12 +45,11 @@ class ProductModel {
     this.rating = 0.0,
     this.reviewCount = 0,
     this.sku = '',
-    this.weight = 0.0,
+   
     Map<String, String>? dimensions,
     this.status = 'draft',
   }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now(),
-       dimensions = dimensions ?? {'height': '0', 'width': '0', 'length': '0'};
+       updatedAt = updatedAt ?? DateTime.now();
 
   // Method to convert ProductModel to JSON for Firestore
   Map<String, dynamic> toJson() {
@@ -65,10 +61,10 @@ class ProductModel {
       'discountPrice': discountPrice,
       'stock': stock,
       'category': category,
-      'subCategory': subCategory,
-      'brand': brand,
+      'categoryname': categoryname,
+      
+     
       'images': images,
-      'tags': tags,
       'isActive': isActive,
       'isFeatured': isFeatured,
       'isOnSale': isOnSale,
@@ -79,8 +75,6 @@ class ProductModel {
       'rating': rating,
       'reviewCount': reviewCount,
       'sku': sku,
-      'weight': weight,
-      'dimensions': dimensions,
       'status': status,
     };
   }
@@ -95,10 +89,8 @@ class ProductModel {
       discountPrice: json['discountPrice']?.toDouble(),
       stock: json['stock'] ?? 0,
       category: json['category'] ?? '',
-      subCategory: json['subCategory'] ?? '',
-      brand: json['brand'] ?? '',
+      categoryname: json['categoryname'] ?? '',
       images: List<String>.from(json['images'] ?? []),
-      tags: List<String>.from(json['tags'] ?? []),
       isActive: json['isActive'] ?? true,
       isFeatured: json['isFeatured'] ?? false,
       isOnSale: json['isOnSale'] ?? false,
@@ -113,7 +105,6 @@ class ProductModel {
       rating: (json['rating'] ?? 0.0).toDouble(),
       reviewCount: json['reviewCount'] ?? 0,
       sku: json['sku'] ?? '',
-      weight: (json['weight'] ?? 0.0).toDouble(),
       dimensions: Map<String, String>.from(json['dimensions'] ?? 
           {'height': '0', 'width': '0', 'length': '0'}),
       status: json['status'] ?? 'draft',
@@ -127,6 +118,7 @@ class ProductModel {
     required double price,
     required int stock,
     required String category,
+    required String categoryname,
     required String adminId,
     double? discountPrice,
     String? subCategory,
@@ -146,14 +138,14 @@ class ProductModel {
       discountPrice: discountPrice,
       stock: stock,
       category: category,
-      subCategory: subCategory ?? '',
-      brand: brand ?? '',
+      categoryname: categoryname,
+      
       images: images ?? [],
-      tags: tags ?? [],
+     
       adminId: adminId,
       specifications: specifications ?? {},
       sku: sku ?? '',
-      weight: weight ?? 0.0,
+    
       dimensions: dimensions ?? {'height': '0', 'width': '0', 'length': '0'},
     );
   }
@@ -193,10 +185,9 @@ class ProductModel {
       discountPrice: discountPrice ?? this.discountPrice,
       stock: stock ?? this.stock,
       category: category ?? this.category,
-      subCategory: subCategory ?? this.subCategory,
-      brand: brand ?? this.brand,
+      categoryname: categoryname,
+     
       images: images ?? this.images,
-      tags: tags ?? this.tags,
       isActive: isActive ?? this.isActive,
       isFeatured: isFeatured ?? this.isFeatured,
       isOnSale: isOnSale ?? this.isOnSale,
@@ -207,8 +198,7 @@ class ProductModel {
       rating: rating ?? this.rating,
       reviewCount: reviewCount ?? this.reviewCount,
       sku: sku ?? this.sku,
-      weight: weight ?? this.weight,
-      dimensions: dimensions ?? this.dimensions,
+     
       status: status ?? this.status,
     );
   }

@@ -29,16 +29,9 @@ class ProductController extends GetxController {
   final TextEditingController discountPriceController = TextEditingController();
   final TextEditingController stockController = TextEditingController();
   final TextEditingController skuController = TextEditingController();
-  final TextEditingController weightController = TextEditingController();
-  final TextEditingController heightController = TextEditingController();
-  final TextEditingController widthController = TextEditingController();
-  final TextEditingController lengthController = TextEditingController();
-  final TextEditingController tagsController = TextEditingController(); // For comma-separated tags
 
   // Observable values for dropdowns and checkboxes
   final RxString selectedCategory = ''.obs;
-  final RxString selectedSubCategory = ''.obs; // If you implement subcategories
-  final RxString selectedBrand = ''.obs; // If you implement brands
   final RxList<String> selectedImagesPaths = <String>[].obs; // Local paths of selected images
   final RxList<String> uploadedImagesUrls = <String>[].obs; // URLs of uploaded images
   final RxBool isFeatured = false.obs;
@@ -50,7 +43,6 @@ class ProductController extends GetxController {
   final RxList<CategoryModel> categories = <CategoryModel>[].obs; // To populate category dropdown
   final RxList<CategoryModel> subCategoriesForSelectedCategory = <CategoryModel>[].obs;
   final Map<String, String> _categoryCache = {};
-
 
   @override
   void onInit() {
@@ -67,53 +59,50 @@ class ProductController extends GetxController {
     discountPriceController.dispose();
     stockController.dispose();
     skuController.dispose();
-    weightController.dispose();
-    heightController.dispose();
-    widthController.dispose();
-    lengthController.dispose();
-    tagsController.dispose();
     super.onClose();
   }
 
   // --- Data Fetching ---
-Future<String> getCategoryName(String categoryId) async {
-  // Check if already cached
-  if (_categoryCache.containsKey(categoryId)) {
-    return _categoryCache[categoryId]!;
-  }
+  Future<String> getCategoryName(String categoryId) async {
+    // Check if already cached
+    if (_categoryCache.containsKey(categoryId)) {
+      return _categoryCache[categoryId]!;
+    }
 
-  try {
-    // Fetch from Firestore
-    DocumentSnapshot doc = await FirebaseFirestore.instance
-        .collection('categories')
-        .doc(categoryId)
-        .get();
-    
-    if (doc.exists) {
-      String categoryName = doc.data() as String;['name'];
-      _categoryCache[categoryId] = categoryName;
-      return categoryName;
-    } else {
+    try {
+      // Fetch from Firestore
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('categories')
+          .doc(categoryId)
+          .get();
+      
+      if (doc.exists) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        String categoryName = data['name'] ?? 'Unknown Category';
+        _categoryCache[categoryId] = categoryName;
+        return categoryName;
+      } else {
+        _categoryCache[categoryId] = 'Unknown Category';
+        return 'Unknown Category';
+      }
+    } catch (e) {
+      print('Error fetching category: $e');
       _categoryCache[categoryId] = 'Unknown Category';
       return 'Unknown Category';
     }
-  } catch (e) {
-    print('Error fetching category: $e');
-    _categoryCache[categoryId] = 'Unknown Category';
-    return 'Unknown Category';
   }
-}
 
-// Alternative method if you have a categories list in memory
-String getCategoryNameFromList(String categoryId) {
-  // Assuming you have a categories list in your controller
-  try {
-    final category = categories.firstWhere((cat) => cat.id == categoryId);
-    return category.name;
-  } catch (e) {
-    return 'Unknown Category';
+  // Alternative method if you have a categories list in memory
+  String getCategoryNameFromList(String categoryId) {
+    // Assuming you have a categories list in your controller
+    try {
+      final category = categories.firstWhere((cat) => cat.id == categoryId);
+      return category.name;
+    } catch (e) {
+      return 'Unknown Category';
+    }
   }
-}
+
   Future<void> fetchProducts() async {
     try {
       isLoading.value = true;
@@ -173,12 +162,9 @@ String getCategoryNameFromList(String categoryId) {
         categories.where((cat) => cat.parentId == selectedCat.id).toList()
       );
     }
-    selectedSubCategory.value = ''; // Reset sub-category when parent changes
   }
 
-
   // --- Image Handling ---
-
   Future<void> pickImages() async {
     try {
       final List<XFile> images = await _imagePicker.pickMultiImage(
@@ -241,7 +227,6 @@ String getCategoryNameFromList(String categoryId) {
   }
 
   // --- Product CRUD Operations ---
-
   Future<void> addProduct() async {
     if (!validateProductForm()) return;
 
@@ -265,17 +250,9 @@ String getCategoryNameFromList(String categoryId) {
             : double.parse(discountPriceController.text),
         stock: int.parse(stockController.text),
         category: selectedCategory.value,
-        subCategory: selectedSubCategory.value.isEmpty ? null : selectedSubCategory.value,
-        brand: selectedBrand.value.isEmpty ? null : selectedBrand.value,
+        categoryname: getCategoryNameFromList(selectedCategory.value), // Get category name from list
         images: uploadedImagesUrls.toList(),
-        tags: tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         adminId: currentUser.uid,
-        weight: weightController.text.isEmpty ? 0.0 : double.parse(weightController.text),
-        dimensions: {
-          'height': heightController.text.trim(),
-          'width': widthController.text.trim(),
-          'length': lengthController.text.trim(),
-        },
       ).copyWith(
         isFeatured: isFeatured.value,
         isOnSale: isOnSale.value,
@@ -323,19 +300,10 @@ String getCategoryNameFromList(String categoryId) {
             : double.parse(discountPriceController.text),
         stock: int.parse(stockController.text),
         category: selectedCategory.value,
-        subCategory: selectedSubCategory.value.isEmpty ? null : selectedSubCategory.value,
-        brand: selectedBrand.value.isEmpty ? null : selectedBrand.value,
         images: uploadedImagesUrls.toList(), // Use the new/updated image URLs
-        tags: tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         isFeatured: isFeatured.value,
         isOnSale: isOnSale.value,
         isActive: isActive.value,
-        weight: weightController.text.isEmpty ? 0.0 : double.parse(weightController.text),
-        dimensions: {
-          'height': heightController.text.trim(),
-          'width': widthController.text.trim(),
-          'length': lengthController.text.trim(),
-        },
         status: currentProductStatus.value,
         updatedAt: DateTime.now(), // Ensure updated timestamp
       );
@@ -398,7 +366,6 @@ String getCategoryNameFromList(String categoryId) {
   }
 
   // --- Helper Methods ---
-
   bool validateProductForm() {
     if (nameController.text.trim().isEmpty) {
       Get.snackbar('Error', 'Product name is required.', backgroundColor: Colors.red, colorText: Colors.white);
@@ -435,14 +402,7 @@ String getCategoryNameFromList(String categoryId) {
     discountPriceController.clear();
     stockController.clear();
     skuController.clear();
-    weightController.clear();
-    heightController.clear();
-    widthController.clear();
-    lengthController.clear();
-    tagsController.clear();
     selectedCategory.value = '';
-    selectedSubCategory.value = '';
-    selectedBrand.value = '';
     selectedImagesPaths.clear();
     uploadedImagesUrls.clear();
     isFeatured.value = false;
@@ -459,16 +419,9 @@ String getCategoryNameFromList(String categoryId) {
     discountPriceController.text = product.discountPrice?.toString() ?? '';
     stockController.text = product.stock.toString();
     skuController.text = product.sku;
-    weightController.text = product.weight.toString();
-    heightController.text = product.dimensions['height'] ?? '';
-    widthController.text = product.dimensions['width'] ?? '';
-    lengthController.text = product.dimensions['length'] ?? '';
-    tagsController.text = product.tags.join(', '); // Join tags for display
     
     selectedCategory.value = product.category;
     updateSubCategories(product.category); // Populate subcategories for the selected category
-    selectedSubCategory.value = product.subCategory;
-    selectedBrand.value = product.brand;
 
     uploadedImagesUrls.assignAll(product.images); // Assign existing image URLs
     selectedImagesPaths.clear(); // Clear local paths as they don't persist
@@ -480,7 +433,6 @@ String getCategoryNameFromList(String categoryId) {
   }
 
   // --- UI Related Dialogs/Screens (Example implementations) ---
-
   void showAddEditProductDialog({ProductModel? productToEdit}) {
     clearForm(); // Always clear form before showing
     if (productToEdit != null) {
@@ -618,107 +570,13 @@ String getCategoryNameFromList(String categoryId) {
                         if (selectedCategory.value.isNotEmpty && subCategoriesForSelectedCategory.isNotEmpty) {
                           return Column(
                             children: [
-                              DropdownButtonFormField<String>(
-                                value: selectedSubCategory.value.isEmpty ? null : selectedSubCategory.value,
-                                decoration: InputDecoration(
-                                  labelText: 'Sub-Category (Optional)',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                items: [
-                                  DropdownMenuItem<String>(
-                                    value: null,
-                                    child: Text('Select Sub-Category'),
-                                  ),
-                                  ...subCategoriesForSelectedCategory.map((subCat) => DropdownMenuItem<String>(
-                                    value: subCat.id,
-                                    child: Text(subCat.name),
-                                  )),
-                                ],
-                                onChanged: (value) {
-                                  selectedSubCategory.value = value ?? '';
-                                },
-                              ),
+                              // Add your subcategory dropdown here if needed
                               const SizedBox(height: 16),
                             ],
                           );
                         }
                         return const SizedBox.shrink();
                       }),
-
-                      // Brand (Optional)
-                      TextFormField(
-                        controller: TextEditingController(text: selectedBrand.value), // Use a controller or update the observable
-                        decoration: InputDecoration(
-                          labelText: 'Brand (Optional)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onChanged: (value) => selectedBrand.value = value.trim(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Tags
-                      TextFormField(
-                        controller: tagsController,
-                        decoration: InputDecoration(
-                          labelText: 'Tags (comma-separated)',
-                          hintText: 'e.g., electronics, mobile, smartphone',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Weight
-                      TextFormField(
-                        controller: weightController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Weight (kg, optional)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Dimensions
-                      Text('Dimensions (Optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: heightController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Height (cm)',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: widthController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Width (cm)',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: lengthController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'Length (cm)',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
 
                       // Image Selection
                       Text(
@@ -845,7 +703,7 @@ String getCategoryNameFromList(String categoryId) {
                         items: <String>['draft', 'published', 'archived'].map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(StringCasingExtension(value).capitalizeFirst), // Using explicit extension override
+                            child: Text(value), // Using the extension
                           );
                         }).toList(),
                         onChanged: (String? newValue) {

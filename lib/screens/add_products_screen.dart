@@ -17,7 +17,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Products', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Manage Products',
+          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -74,8 +77,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               height: 80,
                               width: 80,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image, size: 80),
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const Icon(Icons.broken_image, size: 80),
                             ),
                           )
                         else
@@ -86,8 +90,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.image_not_supported,
-                                size: 40, color: Colors.grey),
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
                           ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -97,14 +104,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               Text(
                                 product.name,
                                 style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                             Text(
-  'Category: ${productController.getCategoryNameFromList(product.category)}',
-  style: const TextStyle(fontSize: 14, color: Colors.grey),
-),
+                              Text(
+                                'Category: ${productController.getCategoryNameFromList(product.category)}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
                               Text(
                                 'Price: \$${product.price.toStringAsFixed(2)}',
                                 style: const TextStyle(fontSize: 16),
@@ -113,21 +125,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 Text(
                                   'Discount: \$${product.discountPrice!.toStringAsFixed(2)} (${product.discountPercentage.toStringAsFixed(0)}% off)',
                                   style: TextStyle(
-                                      fontSize: 14, color: Colors.green[700]),
+                                    fontSize: 14,
+                                    color: Colors.green[700],
+                                  ),
                                 ),
                               Text(
                                 'Stock: ${product.stock}',
                                 style: TextStyle(
-                                    fontSize: 14,
-                                    color: product.isInStock ? Colors.green : Colors.red),
+                                  fontSize: 14,
+                                  color:
+                                      product.isInStock
+                                          ? Colors.green
+                                          : Colors.red,
+                                ),
                               ),
                               Text(
                                 'Status: ${GetStringUtils(product.status).capitalizeFirst}',
                                 style: TextStyle(
-                                    fontSize: 14,
-                                    color: product.status == 'published'
-                                        ? Colors.blue
-                                        : Colors.orange),
+                                  fontSize: 14,
+                                  color:
+                                      product.status == 'published'
+                                          ? Colors.blue
+                                          : Colors.orange,
+                                ),
                               ),
                             ],
                           ),
@@ -140,7 +160,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton.icon(
-                          onPressed: () => productController.showAddEditProductDialog(productToEdit: product),
+                          onPressed:
+                              () => productController.showAddEditProductDialog(
+                                productToEdit: product,
+                              ),
                           icon: const Icon(Icons.edit),
                           label: const Text('Edit'),
                         ),
@@ -148,7 +171,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           onPressed: () {
                             Get.defaultDialog(
                               title: 'Delete Product',
-                              middleText: 'Are you sure you want to delete "${product.name}"?',
+                              middleText:
+                                  'Are you sure you want to delete "${product.name}"?',
                               textConfirm: 'Delete',
                               textCancel: 'Cancel',
                               confirmTextColor: Colors.white,
@@ -160,7 +184,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete, color: Colors.red),
-                          label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ),
                       ],
                     ),
