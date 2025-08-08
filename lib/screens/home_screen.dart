@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:yellow_admin/screens/add_products_screen.dart';
 import 'package:yellow_admin/screens/categories_screen.dart';
+import 'package:yellow_admin/screens/orders_screen.dart';
 import 'package:yellow_admin/widgets/CustomeTextAndBtns/custome_text.dart';
 
 import '../Utils/colors.dart';
@@ -131,8 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: "View recent orders",
                     color: Colors.blue,
                     onTap: () {
-                      // Handle order button press
-                    },
+Get.to(OrdersScreen());                    },
                   ),
                   _buildActionCard(
                     icon: Icons.add_box_rounded,

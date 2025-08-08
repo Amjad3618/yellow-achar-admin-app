@@ -9,7 +9,6 @@ class ProductModel {
   int stock;
   String category;
   String categoryname;
-
   List<String> images;
   bool isActive;
   bool isFeatured;
