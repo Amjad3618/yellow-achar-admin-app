@@ -104,9 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Quick Actions Title
               CustomText(
                 "Quick Actions",
@@ -114,9 +114,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Action Cards Grid
               GridView.count(
                 shrinkWrap: true,
@@ -132,7 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: "View recent orders",
                     color: Colors.blue,
                     onTap: () {
-Get.to(OrdersScreen());                    },
+                      Get.to(OrdersScreen());
+                    },
                   ),
                   _buildActionCard(
                     icon: Icons.add_box_rounded,
@@ -163,9 +164,9 @@ Get.to(OrdersScreen());                    },
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Statistics Section (Optional)
               Container(
                 width: double.infinity,
@@ -203,9 +204,21 @@ Get.to(OrdersScreen());                    },
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem("Total Products", "0", Icons.inventory_2_rounded),
-                        _buildStatItem("Categories", "0", Icons.category_rounded),
-                        _buildStatItem("Orders", "0", Icons.shopping_bag_rounded),
+                        _buildStatItem(
+                          "Total Products",
+                          "0",
+                          Icons.inventory_2_rounded,
+                        ),
+                        _buildStatItem(
+                          "Categories",
+                          "0",
+                          Icons.category_rounded,
+                        ),
+                        _buildStatItem(
+                          "Orders",
+                          "0",
+                          Icons.shopping_bag_rounded,
+                        ),
                       ],
                     ),
                   ],
@@ -250,11 +263,7 @@ Get.to(OrdersScreen());                    },
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 28),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,11 +275,7 @@ Get.to(OrdersScreen());                    },
                   color: Colors.grey[800],
                 ),
                 const SizedBox(height: 4),
-                CustomText(
-                  subtitle,
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                CustomText(subtitle, fontSize: 12, color: Colors.grey[600]),
               ],
             ),
           ],
@@ -282,11 +287,7 @@ Get.to(OrdersScreen());                    },
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: Colors.grey[600],
-          size: 20,
-        ),
+        Icon(icon, color: Colors.grey[600], size: 20),
         const SizedBox(height: 8),
         CustomText(
           value,
@@ -295,11 +296,7 @@ Get.to(OrdersScreen());                    },
           color: AppColors.primaryColor,
         ),
         const SizedBox(height: 4),
-        CustomText(
-          label,
-          fontSize: 12,
-          color: Colors.grey[600],
-        ),
+        CustomText(label, fontSize: 12, color: Colors.grey[600]),
       ],
     );
   }
