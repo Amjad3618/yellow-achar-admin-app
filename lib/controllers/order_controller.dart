@@ -8,6 +8,7 @@ class OrderController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   var isLoading = false.obs;
+  var isLoadingMore = false.obs;
   var orders = <OrderModel>[].obs;
   var bulkOrders = <dynamic>[].obs;
   var currentOrder = Rxn<OrderModel>();
@@ -18,6 +19,11 @@ class OrderController extends GetxController {
   var customerAddress = ''.obs;
   var isFormValid = false.obs;
 
+  // Pagination
+  DocumentSnapshot? _lastDocument;
+  bool _hasMoreData = true;
+  final int _pageSize = 10;
+
   @override
   void onInit() {
     super.onInit();
@@ -25,6 +31,16 @@ class OrderController extends GetxController {
     ever(customerEmail, (_) => validateForm());
     ever(customerPhone, (_) => validateForm());
     ever(customerAddress, (_) => validateForm());
+    
+    // Auto-load user orders when controller initializes
+    _initializeUserOrders();
+  }
+
+  void _initializeUserOrders() async {
+    final userId = getCurrentUserId();
+    if (userId != null) {
+      await getUserOrders(userId);
+    }
   }
 
   void validateForm() {
@@ -61,7 +77,7 @@ class OrderController extends GetxController {
       double deliveryCharges = subtotal > 1000 ? 0 : 150;
       double totalAmount = subtotal + deliveryCharges;
 
-      String orderId = _firestore.collection('singleorders').doc().id;
+      String orderId = _firestore.collection('Orders').doc().id;
 
       OrderModel order = OrderModel(
         id: orderId,
@@ -82,14 +98,18 @@ class OrderController extends GetxController {
       );
 
       await _firestore
-          .collection('singleorders')
+          .collection('Orders')
           .doc(orderId)
           .set(order.toMap());
 
-      orders.add(order);
+      // Add to local list at the beginning (newest first)
+      orders.insert(0, order);
       currentOrder.value = order;
+      
+      Get.snackbar('Success', 'Order placed successfully!');
       return true;
     } catch (e) {
+      print('Order creation error: $e');
       Get.snackbar('Error', 'Failed to place order: ${e.toString()}');
       return false;
     } finally {
@@ -135,10 +155,14 @@ class OrderController extends GetxController {
           .doc(bulkOrderId)
           .set(bulkOrderData);
 
+      // Add to local list
+      bulkOrders.insert(0, bulkOrderData);
+      
       clearForm();
       Get.snackbar('Success', 'Bulk order placed successfully!');
       return true;
     } catch (e) {
+      print('Bulk order creation error: $e');
       Get.snackbar('Error', 'Failed to place bulk order: ${e.toString()}');
       return false;
     } finally {
@@ -146,66 +170,185 @@ class OrderController extends GetxController {
     }
   }
 
-  Future<void> getAllOrders() async {
+  // Improved method with pagination and better error handling
+  Future<void> getUserOrders(String userId, {bool loadMore = false}) async {
     try {
-      isLoading.value = true;
+      if (!loadMore) {
+        isLoading.value = true;
+        _lastDocument = null;
+        _hasMoreData = true;
+      } else {
+        if (!_hasMoreData || isLoadingMore.value) return;
+        isLoadingMore.value = true;
+      }
 
-      QuerySnapshot querySnapshot = await _firestore
-          .collection('singleorders')
+      Query query = _firestore
+          .collection('Orders')
+          .where('userId', isEqualTo: userId)
           .orderBy('orderDate', descending: true)
-          .get();
+          .limit(_pageSize);
 
-      orders.value = querySnapshot.docs
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      QuerySnapshot querySnapshot = await query.get();
+
+      if (querySnapshot.docs.isEmpty) {
+        _hasMoreData = false;
+        if (!loadMore) {
+          orders.clear();
+        }
+        return;
+      }
+
+      List<OrderModel> newOrders = querySnapshot.docs
           .map((doc) => OrderModel.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
+
+      if (loadMore) {
+        orders.addAll(newOrders);
+      } else {
+        orders.value = newOrders;
+      }
+
+      _lastDocument = querySnapshot.docs.last;
+      _hasMoreData = querySnapshot.docs.length == _pageSize;
+
     } catch (e) {
+      print('Get user orders error: $e');
       Get.snackbar('Error', 'Failed to fetch orders: ${e.toString()}');
     } finally {
       isLoading.value = false;
+      isLoadingMore.value = false;
     }
   }
 
-  Future<void> getAllBulkOrders() async {
+  // Optimized method for getting all orders (admin view)
+  Future<void> getAllOrders({bool loadMore = false}) async {
     try {
-      isLoading.value = true;
+      if (!loadMore) {
+        isLoading.value = true;
+        _lastDocument = null;
+        _hasMoreData = true;
+      } else {
+        if (!_hasMoreData || isLoadingMore.value) return;
+        isLoadingMore.value = true;
+      }
 
-      QuerySnapshot querySnapshot = await _firestore
+      Query query = _firestore
+          .collection('Orders')
+          .orderBy('orderDate', descending: true)
+          .limit(_pageSize);
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      QuerySnapshot querySnapshot = await query.get();
+
+      if (querySnapshot.docs.isEmpty) {
+        _hasMoreData = false;
+        if (!loadMore) {
+          orders.clear();
+        }
+        return;
+      }
+
+      List<OrderModel> newOrders = querySnapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+      if (loadMore) {
+        orders.addAll(newOrders);
+      } else {
+        orders.value = newOrders;
+      }
+
+      _lastDocument = querySnapshot.docs.last;
+      _hasMoreData = querySnapshot.docs.length == _pageSize;
+
+    } catch (e) {
+      print('Get all orders error: $e');
+      Get.snackbar('Error', 'Failed to fetch orders: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+      isLoadingMore.value = false;
+    }
+  }
+
+  Future<void> getAllBulkOrders({bool loadMore = false}) async {
+    try {
+      if (!loadMore) {
+        isLoading.value = true;
+        _lastDocument = null;
+        _hasMoreData = true;
+      } else {
+        if (!_hasMoreData || isLoadingMore.value) return;
+        isLoadingMore.value = true;
+      }
+
+      Query query = _firestore
           .collection('bulkorders')
           .orderBy('orderDate', descending: true)
-          .get();
+          .limit(_pageSize);
 
-      bulkOrders.value = querySnapshot.docs
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      QuerySnapshot querySnapshot = await query.get();
+
+      if (querySnapshot.docs.isEmpty) {
+        _hasMoreData = false;
+        if (!loadMore) {
+          bulkOrders.clear();
+        }
+        return;
+      }
+
+      List<dynamic> newOrders = querySnapshot.docs
           .map((doc) => {
                 'id': doc.id,
                 ...doc.data() as Map<String, dynamic>,
               })
           .toList();
+
+      if (loadMore) {
+        bulkOrders.addAll(newOrders);
+      } else {
+        bulkOrders.value = newOrders;
+      }
+
+      _lastDocument = querySnapshot.docs.last;
+      _hasMoreData = querySnapshot.docs.length == _pageSize;
+
     } catch (e) {
+      print('Get bulk orders error: $e');
       Get.snackbar('Error', 'Failed to fetch bulk orders: ${e.toString()}');
     } finally {
       isLoading.value = false;
+      isLoadingMore.value = false;
     }
   }
 
-  Future<void> getUserOrders(String userId) async {
-    try {
-      isLoading.value = true;
-
-      QuerySnapshot querySnapshot = await _firestore
-          .collection('singleorders')
-          .where('userId', isEqualTo: userId)
-          .orderBy('orderDate', descending: true)
-          .get();
-
-      orders.value = querySnapshot.docs
-          .map((doc) => OrderModel.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch orders: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
+  // Method to refresh orders
+  Future<void> refreshOrders() async {
+    final userId = getCurrentUserId();
+    if (userId != null) {
+      await getUserOrders(userId);
     }
   }
+
+  // Load more orders (for pagination)
+  Future<void> loadMoreOrders() async {
+    final userId = getCurrentUserId();
+    if (userId != null) {
+      await getUserOrders(userId, loadMore: true);
+    }
+  }
+
+  bool get hasMoreData => _hasMoreData;
 
   Future<bool> updateOrderStatus(String orderId, String status) async {
     try {
@@ -222,6 +365,7 @@ class OrderController extends GetxController {
       Get.snackbar('Success', 'Order status updated successfully!');
       return true;
     } catch (e) {
+      print('Update order status error: $e');
       Get.snackbar('Error', 'Failed to update order status: ${e.toString()}');
       return false;
     }
@@ -242,6 +386,7 @@ class OrderController extends GetxController {
       Get.snackbar('Success', 'Bulk order status updated successfully!');
       return true;
     } catch (e) {
+      print('Update bulk order status error: $e');
       Get.snackbar('Error', 'Failed to update bulk order status: ${e.toString()}');
       return false;
     }
@@ -254,6 +399,7 @@ class OrderController extends GetxController {
       Get.snackbar('Success', 'Order deleted successfully!');
       return true;
     } catch (e) {
+      print('Delete order error: $e');
       Get.snackbar('Error', 'Failed to delete order: ${e.toString()}');
       return false;
     }
@@ -266,6 +412,7 @@ class OrderController extends GetxController {
       Get.snackbar('Success', 'Bulk order deleted successfully!');
       return true;
     } catch (e) {
+      print('Delete bulk order error: $e');
       Get.snackbar('Error', 'Failed to delete bulk order: ${e.toString()}');
       return false;
     }
@@ -281,5 +428,28 @@ class OrderController extends GetxController {
     customerEmail.value = '';
     customerPhone.value = '';
     customerAddress.value = '';
+  }
+
+  // Method to check authentication status
+  bool isUserLoggedIn() {
+    return FirebaseAuth.instance.currentUser != null;
+  }
+
+  // Method to get order by ID (useful for invoice generation)
+  Future<OrderModel?> getOrderById(String orderId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection('singleorders')
+          .doc(orderId)
+          .get();
+      
+      if (doc.exists) {
+        return OrderModel.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      print('Get order by ID error: $e');
+      return null;
+    }
   }
 }

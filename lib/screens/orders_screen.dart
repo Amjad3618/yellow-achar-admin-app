@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
@@ -26,106 +23,127 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      orderController.getAllOrders();
+      _loadOrders();
     });
+  }
+
+  void _loadOrders() async {
+    // Check if user is logged in
+    final userId = orderController.getCurrentUserId();
+    if (userId == null) {
+      Get.snackbar(
+        'Authentication Required',
+        'Please login to view orders',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // Load user-specific orders instead of all orders
+    await orderController.getUserOrders(userId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Orders Management'),
-        backgroundColor: Colors.blue,
+        title: const Text('My Orders'),
+        backgroundColor: Colors.black87,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshOrders,
+          ),
+        ],
       ),
       body: _buildOrdersList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          orderController.getAllOrders();
-        },
-        child: const Icon(Icons.refresh),
-      ),
     );
   }
 
-  // PDF Generation Methods
+  Future<void> _refreshOrders() async {
+    final userId = orderController.getCurrentUserId();
+    if (userId != null) {
+      await orderController.getUserOrders(userId);
+    }
+  }
+
+  // Optimized PDF Generation - Much Faster!
   Future<void> _generateOrderPDF(OrderModel order) async {
     try {
-      // Show loading
+      // Show loading with timeout
       Get.dialog(
-        const Center(
-          child: CircularProgressIndicator(),
+        WillPopScope(
+          onWillPop: () async => false,
+          child: const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Generating PDF...\nThis may take a few seconds'),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
         barrierDismissible: false,
       );
 
+      // Create PDF with minimal complexity for speed
       final pdf = pw.Document();
       
-      // Try to load fonts, but make them optional
-      pw.Font? regularFont;
-      pw.Font? boldFont;
-      
-      try {
-        regularFont = await PdfGoogleFonts.notoSansRegular();
-        boldFont = await PdfGoogleFonts.notoSansBold();
-      } catch (e) {
-        print('Font loading failed: $e');
-        // Continue without custom fonts - PDF will use default fonts
-      }
-      
-      // Load company logo (optional)
-      final Uint8List? logoData = await _loadCompanyLogo();
-
-      // Create theme with fonts only if they loaded successfully
-      pw.ThemeData theme;
-      if (regularFont != null && boldFont != null) {
-        theme = pw.ThemeData.withFont(
-          base: regularFont,
-          bold: boldFont,
-        );
-      } else {
-        theme = pw.ThemeData();
-      }
-
       pdf.addPage(
-        pw.MultiPage(
+        pw.Page(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
-          theme: theme,
-          header: (context) => _buildPDFHeader(logoData),
-          footer: (context) => _buildPDFFooter(),
-          build: (context) => [
-            _buildOrderInfo(order),
-            pw.SizedBox(height: 20),
-            _buildCustomerInfo(order),
-            pw.SizedBox(height: 20),
-            _buildProductDetails(order),
-            pw.SizedBox(height: 20),
-            _buildOrderSummary(order),
-            pw.SizedBox(height: 30),
-            _buildThankYouMessage(),
-          ],
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Simple Header
+              _buildSimplePDFHeader(),
+              pw.SizedBox(height: 30),
+              
+              // Order Info
+              _buildSimpleOrderInfo(order),
+              pw.SizedBox(height: 20),
+              
+              // Customer Info
+              _buildSimpleCustomerInfo(order),
+              pw.SizedBox(height: 20),
+              
+              // Product Table
+              _buildSimpleProductTable(order),
+              pw.SizedBox(height: 20),
+              
+              // Total
+              _buildSimpleTotal(order),
+              pw.SizedBox(height: 30),
+              
+              // Footer
+              _buildSimpleFooter(),
+            ],
+          ),
         ),
       );
 
       // Close loading dialog
       Get.back();
 
-      // Show PDF preview
+      // Show PDF immediately
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => pdf.save(),
         name: 'Order_${order.id.substring(0, 8)}.pdf',
       );
 
-      Get.snackbar(
-        'Success',
-        'PDF generated successfully',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
     } catch (e) {
-      // Make sure to close loading dialog
+      // Close loading dialog if open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
@@ -133,390 +151,187 @@ class _OrdersScreenState extends State<OrdersScreen> {
       print('PDF Generation Error: $e');
       Get.snackbar(
         'Error',
-        'Failed to generate PDF: ${e.toString()}',
+        'Failed to generate invoice. Please try again.',
         backgroundColor: Colors.red,
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 5),
       );
     }
   }
 
-  // Updated logo loading method with better error handling
-  Future<Uint8List?> _loadCompanyLogo() async {
-    try {
-      final ByteData data = await rootBundle.load('assets/logo.png');
-      return data.buffer.asUint8List();
-    } catch (e) {
-      print('Logo loading failed: $e');
-      return null; // Return null if logo doesn't exist
-    }
-  }
-
-  // PDF Header
-  pw.Widget _buildPDFHeader(Uint8List? logoData) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.only(bottom: 20),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(bottom: pw.BorderSide(width: 2, color: PdfColors.blue)),
-      ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              if (logoData != null)
-                pw.Image(
-                  pw.MemoryImage(logoData),
-                  width: 80,
-                  height: 40,
-                )
-              else
-                pw.Text(
-                  'YOUR COMPANY',
-                  style: pw.TextStyle(
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.blue,
-                  ),
-                ),
-              pw.SizedBox(height: 5),
-              pw.Text('Your Business Address'),
-              pw.Text('City, State, ZIP Code'),
-              pw.Text('Phone: (123) 456-7890'),
-              pw.Text('Email: contact@yourcompany.com'),
-            ],
-          ),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              pw.Text(
-                'ORDER RECEIPT',
-                style: pw.TextStyle(
-                  fontSize: 20,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blue,
-                ),
-              ),
-              pw.SizedBox(height: 10),
-              pw.Text('Generated: ${DateFormat('MMM dd, yyyy - hh:mm a').format(DateTime.now())}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // PDF Footer
-  pw.Widget _buildPDFFooter() {
-    return pw.Container(
-      padding: const pw.EdgeInsets.only(top: 20),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(width: 1, color: PdfColors.grey)),
-      ),
-      child: pw.Center(
-        child: pw.Column(
+  // Simplified PDF Components for Speed
+  pw.Widget _buildSimplePDFHeader() {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              'Thank you for your business!',
+              'YELLOW ACHAR',
               style: pw.TextStyle(
-                fontSize: 12,
+                fontSize: 24,
                 fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
               ),
             ),
-            pw.SizedBox(height: 5),
-            pw.Text(
-              'For any questions regarding this order, please contact our customer service.',
-              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
-            ),
+            pw.Text('Delicious Pickles & Spices'),
+            pw.Text('WhatsApp: +923231324627'),
           ],
         ),
-      ),
-    );
-  }
-
-  // PDF Order Info
-  pw.Widget _buildOrderInfo(OrderModel order) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(15),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.grey100,
-        borderRadius: pw.BorderRadius.circular(5),
-      ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'ORDER DETAILS',
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 8),
-              pw.Text('Order Number: #${order.id.substring(0, 8).toUpperCase()}'),
-              pw.Text('Order Date: ${DateFormat('MMM dd, yyyy - hh:mm a').format(order.orderDate)}'),
-              pw.Text('Status: ${order.status.toUpperCase()}'),
-            ],
-          ),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: pw.BoxDecoration(
-              color: _getPDFStatusColor(order.status),
-              borderRadius: pw.BorderRadius.circular(12),
-            ),
-            child: pw.Text(
-              order.status.toUpperCase(),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Text(
+              'INVOICE',
               style: pw.TextStyle(
-                color: PdfColors.white,
-                fontSize: 10,
+                fontSize: 20,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Updated customer info method to handle null values safely
-  pw.Widget _buildCustomerInfo(OrderModel order) {
-    return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(15),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300),
-        borderRadius: pw.BorderRadius.circular(5),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            'CUSTOMER INFORMATION',
-            style: pw.TextStyle(
-              fontSize: 14,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blue,
-            ),
-          ),
-          pw.SizedBox(height: 10),
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Name: ${order.customerName ?? "N/A"}'),
-                    pw.SizedBox(height: 4),
-                    pw.Text('Phone: ${order.customerPhone ?? "N/A"}'),
-                    pw.SizedBox(height: 4),
-                    // Handle potential null values
-                    pw.Text('Email: ${_getCustomerEmail(order)}'),
-                  ],
-                ),
-              ),
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Shipping Address:'),
-                    pw.SizedBox(height: 4),
-                    pw.Text('${_getCustomerAddress(order)}'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper methods to safely get customer data
-  String _getCustomerEmail(OrderModel order) {
-    // Add null check and provide fallback
-    try {
-      return order.customerEmail?.isNotEmpty == true 
-          ? order.customerEmail! 
-          : 'Not provided';
-    } catch (e) {
-      return 'Not provided';
-    }
-  }
-
-  String _getCustomerAddress(OrderModel order) {
-    // Add null check and provide fallback
-    try {
-      return order.customerAddress?.isNotEmpty == true 
-          ? order.customerAddress! 
-          : 'Address not provided';
-    } catch (e) {
-      return 'Address not provided';
-    }
-  }
-
-  // Updated product details with better null handling
-  pw.Widget _buildProductDetails(OrderModel order) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'PRODUCT DETAILS',
-          style: pw.TextStyle(
-            fontSize: 14,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColors.blue,
-          ),
-        ),
-        pw.SizedBox(height: 10),
-        pw.Table(
-          border: pw.TableBorder.all(color: PdfColors.grey300),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(3),
-            1: const pw.FlexColumnWidth(1),
-            2: const pw.FlexColumnWidth(1.5),
-            3: const pw.FlexColumnWidth(1.5),
-          },
-          children: [
-            // Header
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(color: PdfColors.blue),
-              children: [
-                _buildTableHeader('Product Name'),
-                _buildTableHeader('Qty', align: pw.TextAlign.center),
-                _buildTableHeader('Unit Price', align: pw.TextAlign.right),
-                _buildTableHeader('Total', align: pw.TextAlign.right),
-              ],
-            ),
-            // Product row with safe access
-            pw.TableRow(
-              children: [
-                _buildTableCell(order.productName ?? 'Unknown Product'),
-                _buildTableCell(
-                  (order.quantity ?? 0).toString(), 
-                  align: pw.TextAlign.center
-                ),
-                _buildTableCell(
-                  '\$${(order.finalPrice ?? 0.0).toStringAsFixed(2)}',
-                  align: pw.TextAlign.right
-                ),
-                _buildTableCell(
-                  '\$${((order.finalPrice ?? 0.0) * (order.quantity ?? 0)).toStringAsFixed(2)}',
-                  align: pw.TextAlign.right,
-                  isBold: true
-                ),
-              ],
-            ),
+            pw.Text('Date: ${DateFormat('MMM dd, yyyy').format(DateTime.now())}'),
           ],
         ),
       ],
     );
   }
 
-  // Helper methods for table building
-  pw.Widget _buildTableHeader(String text, {pw.TextAlign? align}) {
+  pw.Widget _buildSimpleOrderInfo(OrderModel order) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Order ID: #${order.id.substring(0, 8).toUpperCase()}'),
+          pw.Text('Date: ${DateFormat('MMM dd, yyyy').format(order.orderDate)}'),
+          pw.Text('Status: ${(order.status ?? 'Pending').toUpperCase()}'),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildSimpleCustomerInfo(OrderModel order) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'CUSTOMER DETAILS',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Text('Name: ${order.customerName ?? "N/A"}'),
+          pw.Text('Phone: ${order.customerPhone ?? "N/A"}'),
+          pw.Text('Email: ${order.customerEmail ?? "N/A"}'),
+          pw.Text('Address: ${order.customerAddress ?? "N/A"}'),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildSimpleProductTable(OrderModel order) {
+    return pw.Table(
+      border: pw.TableBorder.all(),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(3),
+        1: const pw.FlexColumnWidth(1),
+        2: const pw.FlexColumnWidth(1.5),
+        3: const pw.FlexColumnWidth(1.5),
+      },
+      children: [
+        // Header
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          children: [
+            _buildSimpleTableCell('Product', isHeader: true),
+            _buildSimpleTableCell('Qty', isHeader: true),
+            _buildSimpleTableCell('Price', isHeader: true),
+            _buildSimpleTableCell('Total', isHeader: true),
+          ],
+        ),
+        // Product Row
+        pw.TableRow(
+          children: [
+            _buildSimpleTableCell(order.productName ?? 'Unknown'),
+            _buildSimpleTableCell(order.quantity.toString()),
+            _buildSimpleTableCell('Rs ${order.finalPrice.round()}'),
+            _buildSimpleTableCell('Rs ${(order.finalPrice * order.quantity).round()}'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildSimpleTableCell(String text, {bool isHeader = false}) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(8),
       child: pw.Text(
         text,
         style: pw.TextStyle(
-          color: PdfColors.white,
-          fontWeight: pw.FontWeight.bold,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
-        textAlign: align ?? pw.TextAlign.left,
       ),
     );
   }
 
-  pw.Widget _buildTableCell(String text, {pw.TextAlign? align, bool isBold = false}) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      child: pw.Text(
-        text,
-        textAlign: align ?? pw.TextAlign.left,
-        style: isBold ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : null,
-      ),
-    );
-  }
-
-  // Updated order summary with null safety
-  pw.Widget _buildOrderSummary(OrderModel order) {
-    final double finalPrice = order.finalPrice ?? 0.0;
-    final int quantity = order.quantity ?? 0;
-    final double totalAmount = order.totalAmount ?? 0.0;
-    
-    final subtotal = finalPrice * quantity;
-    final tax = subtotal * 0.1; // 10% tax (adjust as needed)
-    final shipping = 10.0; // Flat shipping rate (adjust as needed)
-    
-    return pw.Container(
-      width: double.infinity,
-      child: pw.Column(
-        children: [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.end,
-            children: [
-              pw.Container(
-                width: 200,
-                child: pw.Column(
-                  children: [
-                    _buildSummaryRow('Subtotal:', '\$${subtotal.toStringAsFixed(2)}'),
-                    _buildSummaryRow('Tax (10%):', '\$${tax.toStringAsFixed(2)}'),
-                    _buildSummaryRow('Shipping:', '\$${shipping.toStringAsFixed(2)}'),
-                    pw.Divider(),
-                    _buildSummaryRow(
-                      'TOTAL:',
-                      '\$${totalAmount.toStringAsFixed(2)}',
-                      isTotal: true,
-                    ),
-                  ],
+  pw.Widget _buildSimpleTotal(OrderModel order) {
+    return pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Container(
+        width: 200,
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.grey100,
+          borderRadius: pw.BorderRadius.circular(4),
+        ),
+        child: pw.Column(
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Subtotal:'),
+                pw.Text('Rs ${order.subtotal?.round() ?? (order.finalPrice * order.quantity).round()}'),
+              ],
+            ),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Delivery:'),
+                pw.Text('Rs ${order.totalAmount > 1000 ? 0 : 150}'),
+              ],
+            ),
+            pw.Divider(),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'TOTAL:',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                 ),
-              ),
-            ],
-          ),
-        ],
+                pw.Text(
+                  'Rs ${order.totalAmount.round()}',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  pw.Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            label,
-            style: pw.TextStyle(
-              fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-              fontSize: isTotal ? 14 : 12,
-            ),
-          ),
-          pw.Text(
-            value,
-            style: pw.TextStyle(
-              fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-              fontSize: isTotal ? 14 : 12,
-              color: isTotal ? PdfColors.blue : PdfColors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _buildThankYouMessage() {
-    return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(20),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.blue50,
-        borderRadius: pw.BorderRadius.circular(5),
-      ),
+  pw.Widget _buildSimpleFooter() {
+    return pw.Center(
       child: pw.Column(
         children: [
           pw.Text(
@@ -524,67 +339,69 @@ class _OrdersScreenState extends State<OrdersScreen> {
             style: pw.TextStyle(
               fontSize: 16,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColors.blue,
             ),
           ),
           pw.SizedBox(height: 8),
-          pw.Text(
-            'We appreciate your business and hope you enjoy your purchase.',
-            style: const pw.TextStyle(fontSize: 12),
-            textAlign: pw.TextAlign.center,
-          ),
-          pw.SizedBox(height: 8),
-          pw.Text(
-            'Order tracking and updates will be sent to your registered email address.',
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
-            textAlign: pw.TextAlign.center,
-          ),
+          pw.Text('Yellow Achar - Authentic Pakistani Pickles'),
+          pw.Text('For support: +923231324627'),
         ],
       ),
     );
   }
 
-  PdfColor _getPDFStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return PdfColors.orange;
-      case 'processing':
-        return PdfColors.blue;
-      case 'shipped':
-        return PdfColors.purple;
-      case 'delivered':
-        return PdfColors.green;
-      case 'cancelled':
-        return PdfColors.red;
-      default:
-        return PdfColors.grey;
-    }
-  }
-
-  // UI Methods
   Widget _buildOrdersList() {
     return Obx(() {
       if (orderController.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
-
-      if (orderController.orders.isEmpty) {
         return const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.shopping_bag_outlined,
-                size: 64,
-                color: Colors.grey,
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
               ),
               SizedBox(height: 16),
+              Text('Loading orders...'),
+            ],
+          ),
+        );
+      }
+
+      if (orderController.orders.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
               Text(
                 'No orders found',
                 style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your orders will appear here once you make a purchase',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black87,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Start Shopping'),
               ),
             ],
           ),
@@ -592,9 +409,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       }
 
       return RefreshIndicator(
-        onRefresh: () async {
-          await orderController.getAllOrders();
-        },
+        onRefresh: _refreshOrders,
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: orderController.orders.length,
@@ -609,7 +424,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget _buildOrderCard(OrderModel order) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
+      elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -624,23 +439,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Order #${order.id.substring(0, 8)}',
+                    'Order #${order.id.substring(0, 8).toUpperCase()}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                 ),
-                _buildStatusChip(order.status),
+                _buildStatusChip(order.status ?? 'pending'),
               ],
             ),
             const SizedBox(height: 8),
             
             // Order Date
             Text(
-              DateFormat('MMM dd, yyyy • hh:mm a').format(order.orderDate),
-              style: const TextStyle(
-                color: Colors.grey,
+              'Placed: ${DateFormat('MMM dd, yyyy • hh:mm a').format(order.orderDate)}',
+              style: TextStyle(
+                color: Colors.grey[600],
                 fontSize: 13,
               ),
             ),
@@ -652,30 +467,52 @@ class _OrdersScreenState extends State<OrdersScreen> {
             // Product Information
             Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    order.productImage,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.image,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
+                // Product Image
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: order.productImage.isNotEmpty
+                        ? Image.network(
+                            order.productImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image_not_supported),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
+                
+                // Product Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,35 +526,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Quantity: ${order.quantity}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Unit Price: \$${order.finalPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
-                        ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            'Qty: ${order.quantity}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Rs ${order.finalPrice.round()} each',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             
-            // Customer Information
+            // Customer Info Preview
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[200]!),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,8 +569,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const Icon(Icons.person, size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Text(
-                        'Customer: ${order.customerName}',
-                        style: const TextStyle(fontSize: 13),
+                        order.customerName ?? 'Customer Name Not Available',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -738,7 +580,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const Icon(Icons.phone, size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Text(
-                        'Phone: ${order.customerPhone}',
+                        order.customerPhone ?? 'Phone Not Available',
                         style: const TextStyle(fontSize: 13),
                       ),
                     ],
@@ -746,27 +588,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             
-            // Order Total and Actions
+            // Total and Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Total Amount',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: Colors.grey[600],
                         fontSize: 12,
                       ),
                     ),
                     Text(
-                      '\$${order.totalAmount.toStringAsFixed(2)}',
+                      'Rs ${order.totalAmount.round()}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: 20,
                         color: Colors.green,
                       ),
                     ),
@@ -774,20 +616,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.picture_as_pdf, color: Colors.orange),
-                      onPressed: () => _generateOrderPDF(order),
-                      tooltip: 'Generate PDF',
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.print, color: Colors.orange[700]),
+                        onPressed: () => _generateOrderPDF(order),
+                        tooltip: 'Print Invoice',
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _showStatusUpdateDialog(order.id, order.status),
-                      tooltip: 'Update Status',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _showDeleteDialog(order.id),
-                      tooltip: 'Delete Order',
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.edit, color: Colors.blue[700]),
+                        onPressed: () => _showStatusUpdateDialog(order.id, order.status ?? 'pending'),
+                        tooltip: 'Update Status',
+                      ),
                     ),
                   ],
                 ),
@@ -800,40 +650,48 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildStatusChip(String status) {
-    Color color;
+    Color backgroundColor;
+    Color textColor;
+    
     switch (status.toLowerCase()) {
       case 'pending':
-        color = Colors.orange;
+        backgroundColor = Colors.orange[100]!;
+        textColor = Colors.orange[800]!;
         break;
+      case 'confirmed':
       case 'processing':
-        color = Colors.blue;
+        backgroundColor = Colors.blue[100]!;
+        textColor = Colors.blue[800]!;
         break;
       case 'shipped':
-        color = Colors.purple;
+        backgroundColor = Colors.purple[100]!;
+        textColor = Colors.purple[800]!;
         break;
       case 'delivered':
-        color = Colors.green;
+        backgroundColor = Colors.green[100]!;
+        textColor = Colors.green[800]!;
         break;
       case 'cancelled':
-        color = Colors.red;
+        backgroundColor = Colors.red[100]!;
+        textColor = Colors.red[800]!;
         break;
       default:
-        color = Colors.grey;
+        backgroundColor = Colors.grey[100]!;
+        textColor = Colors.grey[800]!;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         status.toUpperCase(),
         style: TextStyle(
-          color: color,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
-          fontSize: 12,
+          color: textColor,
         ),
       ),
     );
@@ -841,30 +699,36 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   void _showStatusUpdateDialog(String orderId, String currentStatus) {
     String newStatus = currentStatus;
+    final List<String> statuses = [
+      'pending',
+      'confirmed', 
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled'
+    ];
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+    Get.dialog(
+      AlertDialog(
         title: const Text('Update Order Status'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Order #${orderId.substring(0, 8)}',
-              style: const TextStyle(
-                color: Colors.grey,
+              'Order #${orderId.substring(0, 8).toUpperCase()}',
+              style: TextStyle(
+                color: Colors.grey[600],
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: newStatus,
+              value: statuses.contains(currentStatus) ? currentStatus : 'pending',
               decoration: const InputDecoration(
-                labelText: 'Status',
+                labelText: 'New Status',
                 border: OutlineInputBorder(),
               ),
-              items: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+              items: statuses
                   .map(
                     (status) => DropdownMenuItem(
                       value: status,
@@ -882,68 +746,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Get.back(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
-              await orderController.updateOrderStatus(orderId, newStatus);
+              Get.back();
               
-              // Show success message
+              // Show updating status
               Get.snackbar(
-                'Success',
-                'Order status updated successfully',
-                backgroundColor: Colors.green,
+                'Updating...',
+                'Please wait while we update the order status',
+                backgroundColor: Colors.blue,
                 colorText: Colors.white,
+                duration: const Duration(seconds: 2),
                 snackPosition: SnackPosition.BOTTOM,
               );
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteDialog(String orderId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Order'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Order #${orderId.substring(0, 8)}'),
-            const SizedBox(height: 8),
-            const Text('Are you sure you want to delete this order? This action cannot be undone.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await orderController.deleteOrder(orderId);
               
-              // Show success message
-              Get.snackbar(
-                'Success',
-                'Order deleted successfully',
-                backgroundColor: Colors.red,
-                colorText: Colors.white,
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              final success = await orderController.updateOrderStatus(orderId, newStatus);
+              
+              if (success) {
+                Get.snackbar(
+                  'Success',
+                  'Order status updated to ${newStatus.toUpperCase()}',
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+              }
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black87,
+              foregroundColor: Colors.white,
             ),
+            child: const Text('Update'),
           ),
         ],
       ),
