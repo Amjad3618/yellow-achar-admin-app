@@ -21,29 +21,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: CustomText(
           "Admin Dashboard",
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          fontSize: 22,
+          color: const Color(0xFF1E293B),
         ),
         centerTitle: true,
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
+        shadowColor: Colors.black.withOpacity(0.1),
+        surfaceTintColor: Colors.transparent,
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 16),
+            margin: const EdgeInsets.only(right: 20),
             child: IconButton(
-              onPressed: () {
-                _showLogoutDialog();
-              },
-              icon: const Icon(Icons.logout_rounded, color: Colors.red),
+              onPressed: _showLogoutDialog,
+              icon: const Icon(Icons.logout_rounded),
+              color: const Color(0xFFDC2626),
               tooltip: 'Sign Out',
               style: IconButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.1),
+                backgroundColor: const Color(0xFFDC2626).withOpacity(0.1),
+                padding: const EdgeInsets.all(12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -54,131 +59,150 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Welcome Section
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
                       AppColors.primaryColor,
-                      AppColors.primaryColor.withOpacity(0.8),
+                      AppColors.primaryColor.withOpacity(0.85),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryColor.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: AppColors.primaryColor.withOpacity(0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.dashboard_rounded,
-                      color: Colors.white,
-                      size: 32,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.dashboard_customize_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     CustomText(
-                      "Welcome Back!",
+                      "Welcome Back, Admin!",
                       color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     CustomText(
-                      "Manage your store efficiently",
+                      "Manage your store efficiently with powerful tools",
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 16,
+                      fontWeight: FontWeight.w400,
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // Quick Actions Title
-              CustomText(
-                "Quick Actions",
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+              // Quick Actions Section
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  CustomText(
+                    "Quick Actions",
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Action Cards Grid
+              // Action Cards Grid - Fixed overflow issue
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.1, // Increased for more height
                 children: [
                   _buildActionCard(
                     icon: Icons.shopping_cart_checkout_rounded,
-                    title: "Check Orders",
-                    subtitle: "View recent orders",
-                    color: Colors.blue,
-                    onTap: () {
-                      Get.to(OrdersScreen());
-                    },
+                    title: "Orders",
+                    subtitle: "View & manage",
+                    color: const Color(0xFF3B82F6),
+                    onTap: () => Get.to(() => OrdersScreen()),
                   ),
                   _buildActionCard(
-                    icon: Icons.add_box_rounded,
-                    title: "Add Products",
-                    subtitle: "Manage inventory",
-                    color: Colors.green,
-                    onTap: () {
-                      Get.to(() => ProductsScreen());
-                    },
+                    icon: Icons.inventory_2_rounded,
+                    title: "Products",
+                    subtitle: "Add & manage",
+                    color: const Color(0xFF10B981),
+                    onTap: () => Get.to(() => ProductsScreen()),
                   ),
                   _buildActionCard(
-                    icon: Icons.image_rounded,
-                    title: "Add Banners",
-                    subtitle: "Promotional content",
-                    color: Colors.orange,
-                    onTap: () {
-                      Get.to(() => BannerScreen());
-                    },
+                    icon: Icons.campaign_rounded,
+                    title: "Banners",
+                    subtitle: "Promotional",
+                    color: const Color(0xFFF59E0B),
+                    onTap: () => Get.to(() => BannerScreen()),
                   ),
                   _buildActionCard(
                     icon: Icons.category_rounded,
-                    title: "Add Categories",
-                    subtitle: "Organize products",
-                    color: Colors.purple,
-                    onTap: () {
-                      Get.to(() => CategoriesScreen());
-                    },
+                    title: "Categories",
+                    subtitle: "Organize",
+                    color: const Color(0xFF8B5CF6),
+                    onTap: () => Get.to(() => CategoriesScreen()),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // Statistics Section (Optional)
+              // Statistics Section
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
@@ -187,43 +211,71 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.analytics_rounded,
-                          color: AppColors.primaryColor,
-                          size: 24,
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.analytics_rounded,
+                            color: AppColors.primaryColor,
+                            size: 22,
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         CustomText(
-                          "Quick Stats",
-                          fontSize: 16,
+                          "Store Overview",
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1E293B),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem(
-                          "Total Products",
-                          "0",
-                          Icons.inventory_2_rounded,
+                        Expanded(
+                          child: _buildStatItem(
+                            "Products",
+                            "0",
+                            Icons.inventory_2_rounded,
+                            const Color(0xFF10B981),
+                          ),
                         ),
-                        _buildStatItem(
-                          "Categories",
-                          "0",
-                          Icons.category_rounded,
+                        Container(
+                          width: 1,
+                          height: 60,
+                          color: const Color(0xFFE2E8F0),
                         ),
-                        _buildStatItem(
-                          "Orders",
-                          "0",
-                          Icons.shopping_bag_rounded,
+                        Expanded(
+                          child: _buildStatItem(
+                            "Categories",
+                            "0",
+                            Icons.category_rounded,
+                            const Color(0xFF8B5CF6),
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 60,
+                          color: const Color(0xFFE2E8F0),
+                        ),
+                        Expanded(
+                          child: _buildStatItem(
+                            "Orders",
+                            "0",
+                            Icons.shopping_bag_rounded,
+                            const Color(0xFF3B82F6),
+                          ),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -238,102 +290,196 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFE2E8F0),
+              width: 1,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+                spreadRadius: 0,
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomText(
-                  title,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon container
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                CustomText(subtitle, fontSize: 12, color: Colors.grey[600]),
-              ],
-            ),
-          ],
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Text content with flexible layout
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomText(
+                      title,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 2),
+                    CustomText(
+                      subtitle,
+                      fontSize: 11,
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w400,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.grey[600], size: 20),
-        const SizedBox(height: 8),
-        CustomText(
-          value,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primaryColor,
-        ),
-        const SizedBox(height: 4),
-        CustomText(label, fontSize: 12, color: Colors.grey[600]),
-      ],
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          CustomText(
+            value,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+          const SizedBox(height: 2),
+          CustomText(
+            label,
+            fontSize: 11,
+            color: const Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+          ),
+        ],
+      ),
     );
   }
 
   void _showLogoutDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           title: Row(
             children: [
-              Icon(Icons.logout_rounded, color: Colors.red),
-              const SizedBox(width: 8),
-              CustomText("Sign Out", fontWeight: FontWeight.w600),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: Color(0xFFDC2626),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              CustomText(
+                "Sign Out",
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                color: const Color(0xFF1E293B),
+              ),
             ],
           ),
-          content: CustomText("Are you sure you want to sign out?"),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: CustomText(
+              "Are you sure you want to sign out of your admin account?",
+              fontSize: 15,
+              color: const Color(0xFF64748B),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: CustomText("Cancel", color: Colors.grey[600]),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: CustomText(
+                "Cancel",
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
             ),
+            const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 authController.signOut();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: CustomText("Sign Out", color: Colors.white),
+              child: CustomText(
+                "Sign Out",
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         );

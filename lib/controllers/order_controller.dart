@@ -351,26 +351,27 @@ class OrderController extends GetxController {
   bool get hasMoreData => _hasMoreData;
 
   Future<bool> updateOrderStatus(String orderId, String status) async {
-    try {
-      await _firestore.collection('singleorders').doc(orderId).update({
-        'status': status,
-      });
+  try {
+    // Fix: Use 'Orders' collection instead of 'singleorders'
+    await _firestore.collection('Orders').doc(orderId).update({
+      'status': status,
+    });
 
-      int index = orders.indexWhere((order) => order.id == orderId);
-      if (index != -1) {
-        orders[index] = orders[index].copyWith(status: status);
-        orders.refresh();
-      }
-
-      Get.snackbar('Success', 'Order status updated successfully!');
-      return true;
-    } catch (e) {
-      print('Update order status error: $e');
-      Get.snackbar('Error', 'Failed to update order status: ${e.toString()}');
-      return false;
+    // Update local orders list
+    int index = orders.indexWhere((order) => order.id == orderId);
+    if (index != -1) {
+      orders[index] = orders[index].copyWith(status: status);
+      orders.refresh();
     }
-  }
 
+    Get.snackbar('Success', 'Order status updated successfully!');
+    return true;
+  } catch (e) {
+    print('Update order status error: $e');
+    Get.snackbar('Error', 'Failed to update order status: ${e.toString()}');
+    return false;
+  }
+}
   Future<bool> updateBulkOrderStatus(String orderId, String status) async {
     try {
       await _firestore.collection('bulkorders').doc(orderId).update({
