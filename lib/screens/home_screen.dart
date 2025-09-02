@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final size = MediaQuery.of(context).size;
     
     return Scaffold(
