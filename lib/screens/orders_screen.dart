@@ -19,10 +19,21 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  final OrderController orderController = Get.put<OrderController>(OrderController());
+  final OrderController orderController = Get.put<OrderController>(
+    OrderController(),
+  );
   String selectedFilter = 'all';
-  final List<String> filterOptions = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
+  final List<String> filterOptions = [
+    'all',
+    'pending',
+    'confirmed',
+    'processing',
+    'shipped',
+    'delivered',
+    'completed', // Add this if you want a separate completed filter
+    'cancelled',
+  ];
   @override
   void initState() {
     super.initState();
@@ -36,7 +47,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       // Debug: Check authentication
       final userId = orderController.getCurrentUserId();
       print('DEBUG: Current User ID: $userId');
-      
+
       if (userId == null) {
         print('DEBUG: No user ID found - user not authenticated');
         Get.snackbar(
@@ -55,14 +66,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
       print('DEBUG: Loading orders for user: $userId');
       await orderController.getUserOrders(userId);
       print('DEBUG: Orders loaded. Count: ${orderController.orders.length}');
-      
+
       // If still no orders, try loading all orders (for admin)
       if (orderController.orders.isEmpty) {
         print('DEBUG: No user orders found, trying to load all orders');
         await orderController.getAllOrders();
-        print('DEBUG: All orders loaded. Count: ${orderController.orders.length}');
+        print(
+          'DEBUG: All orders loaded. Count: ${orderController.orders.length}',
+        );
       }
-      
     } catch (e) {
       print('DEBUG: Error loading orders: $e');
       Get.snackbar(
@@ -84,10 +96,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       appBar: AppBar(
         title: const Text(
           'Orders Management',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
@@ -116,19 +125,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   selectedFilter = value;
                 });
               },
-              itemBuilder: (context) => filterOptions.map((filter) {
-                return PopupMenuItem(
-                  value: filter,
-                  child: Row(
-                    children: [
-                      if (selectedFilter == filter)
-                        const Icon(Icons.check, size: 16, color: Color(0xFF3B82F6)),
-                      if (selectedFilter == filter) const SizedBox(width: 8),
-                      Text(filter.toUpperCase()),
-                    ],
-                  ),
-                );
-              }).toList(),
+              itemBuilder:
+                  (context) =>
+                      filterOptions.map((filter) {
+                        return PopupMenuItem(
+                          value: filter,
+                          child: Row(
+                            children: [
+                              if (selectedFilter == filter)
+                                const Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Color(0xFF3B82F6),
+                                ),
+                              if (selectedFilter == filter)
+                                const SizedBox(width: 8),
+                              Text(filter.toUpperCase()),
+                            ],
+                          ),
+                        );
+                      }).toList(),
             ),
           ),
           // Refresh Button
@@ -173,9 +189,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Obx(() {
               final orders = orderController.orders;
               final totalOrders = orders.length;
-              final pendingOrders = orders.where((o) => o.status.toLowerCase() == 'pending').length;
-              final completedOrders = orders.where((o) => o.status.toLowerCase() == 'delivered').length;
-              
+              final pendingOrders =
+                  orders
+                      .where((o) => o.status.toLowerCase() == 'pending')
+                      .length;
+              final completedOrders =
+                  orders
+                      .where((o) => o.status.toLowerCase() == 'delivered')
+                      .length;
+
               return Row(
                 children: [
                   Expanded(
@@ -208,7 +230,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               );
             }),
           ),
-          
+
           // Orders List
           Expanded(child: _buildOrdersList()),
         ],
@@ -226,7 +248,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -265,7 +292,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     try {
       final userId = orderController.getCurrentUserId();
       print('DEBUG: Refreshing orders for user: $userId');
-      
+
       if (userId != null) {
         await orderController.getUserOrders(userId);
         // Also try loading all orders if user orders are empty
@@ -273,7 +300,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           await orderController.getAllOrders();
         }
       }
-      
+
       Get.snackbar(
         'Refreshed',
         'Orders updated successfully',
@@ -302,7 +329,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final userId = orderController.getCurrentUserId();
     final ordersCount = orderController.orders.length;
     final isLoading = orderController.isLoading.value;
-    
+
     Get.dialog(
       AlertDialog(
         title: const Text('Debug Information'),
@@ -331,15 +358,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
             },
             child: const Text('Load All Orders'),
           ),
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Close')),
         ],
       ),
     );
   }
 
+  // Updated filtering logic in _buildOrdersList method:
   Widget _buildOrdersList() {
     return Obx(() {
       if (orderController.isLoading.value) {
@@ -368,9 +393,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
       // Filter orders based on selected filter
       List<OrderModel> filteredOrders = orderController.orders;
       if (selectedFilter != 'all') {
-        filteredOrders = orderController.orders
-            .where((order) => order.status.toLowerCase() == selectedFilter)
-            .toList();
+        filteredOrders =
+            orderController.orders.where((order) {
+              final orderStatus = order.status.toLowerCase();
+
+              // Special handling: treat 'delivered' orders as 'completed' for filtering
+              if (selectedFilter == 'completed') {
+                return orderStatus == 'delivered' || orderStatus == 'completed';
+              }
+
+              return orderStatus == selectedFilter;
+            }).toList();
       }
 
       if (filteredOrders.isEmpty) {
@@ -394,7 +427,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  selectedFilter == 'all' ? 'No orders found' : 'No ${selectedFilter} orders',
+                  selectedFilter == 'all'
+                      ? 'No orders found'
+                      : selectedFilter == 'completed'
+                      ? 'No completed orders'
+                      : 'No ${selectedFilter} orders',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
@@ -403,9 +440,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  selectedFilter == 'all' 
-                    ? 'Orders will appear here once customers place them'
-                    : 'No orders with ${selectedFilter} status found',
+                  selectedFilter == 'all'
+                      ? 'Orders will appear here once customers place them'
+                      : selectedFilter == 'completed'
+                      ? 'No completed/delivered orders found'
+                      : 'No orders with ${selectedFilter} status found',
                   style: const TextStyle(
                     fontSize: 15,
                     color: Color(0xFF64748B),
@@ -423,7 +462,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3B82F6),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -436,7 +478,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       label: const Text('Debug'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF64748B),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -502,7 +547,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('MMM dd, yyyy • hh:mm a').format(order.orderDate),
+                        DateFormat(
+                          'MMM dd, yyyy • hh:mm a',
+                        ).format(order.orderDate),
                         style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 13,
@@ -515,9 +562,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 _buildStatusChip(order.status),
               ],
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Product Information
             Container(
               padding: const EdgeInsets.all(16),
@@ -538,49 +585,57 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: order.productImage.isNotEmpty
-                          ? Image.network(
-                              order.productImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: const Color(0xFFF1F5F9),
-                                  child: const Icon(
-                                    Icons.image_not_supported_rounded,
-                                    color: Color(0xFF94A3B8),
-                                    size: 24,
-                                  ),
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: const Color(0xFFF1F5F9),
-                                  child: const Center(
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                      child:
+                          order.productImage.isNotEmpty
+                              ? Image.network(
+                                order.productImage,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: const Color(0xFFF1F5F9),
+                                    child: const Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: Color(0xFF94A3B8),
+                                      size: 24,
+                                    ),
+                                  );
+                                },
+                                loadingBuilder: (
+                                  context,
+                                  child,
+                                  loadingProgress,
+                                ) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: const Color(0xFFF1F5F9),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Color(0xFF3B82F6),
+                                              ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              color: const Color(0xFFF1F5F9),
-                              child: const Icon(
-                                Icons.shopping_bag_rounded,
-                                color: Color(0xFF94A3B8),
-                                size: 24,
+                                  );
+                                },
+                              )
+                              : Container(
+                                color: const Color(0xFFF1F5F9),
+                                child: const Icon(
+                                  Icons.shopping_bag_rounded,
+                                  color: Color(0xFF94A3B8),
+                                  size: 24,
+                                ),
                               ),
-                            ),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Product Details
                   Expanded(
                     child: Column(
@@ -600,7 +655,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF3B82F6).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -631,9 +689,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Customer Info
             Container(
               padding: const EdgeInsets.all(16),
@@ -656,12 +714,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.person_rounded, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.person_rounded,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           order.customerName,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -669,7 +734,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.phone_rounded, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.phone_rounded,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -680,12 +749,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                   // ignore: unnecessary_null_comparison
-                  if (order.customerAddress != null && order.customerAddress.isNotEmpty) ...[
+                  if (order.customerAddress != null &&
+                      order.customerAddress.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF64748B)),
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 16,
+                          color: Color(0xFF64748B),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -701,9 +775,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Total and Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -759,7 +833,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           color: Color(0xFF3B82F6),
                           size: 20,
                         ),
-                        onPressed: () => _showStatusUpdateDialog(order.id, order.status),
+                        onPressed:
+                            () =>
+                                _showStatusUpdateDialog(order.id, order.status),
                         tooltip: 'Update Status',
                       ),
                     ),
@@ -777,7 +853,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     Color backgroundColor;
     Color textColor;
     IconData icon;
-    
+
     switch (status.toLowerCase()) {
       case 'pending':
         backgroundColor = const Color(0xFFF59E0B).withOpacity(0.1);
@@ -855,7 +931,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF3B82F6),
+                      ),
                     ),
                     SizedBox(height: 20),
                     Text(
@@ -868,10 +946,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     SizedBox(height: 8),
                     Text(
                       'Please wait while we create your PDF',
-                      style: TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
                     ),
                   ],
                 ),
@@ -883,27 +958,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
       );
 
       final pdf = pw.Document();
-      
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
-          build: (context) => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSimplePDFHeader(),
-              pw.SizedBox(height: 30),
-              _buildSimpleOrderInfo(order),
-              pw.SizedBox(height: 20),
-              _buildSimpleCustomerInfo(order),
-              pw.SizedBox(height: 20),
-              _buildSimpleProductTable(order),
-              pw.SizedBox(height: 20),
-              _buildSimpleTotal(order),
-              pw.SizedBox(height: 30),
-              _buildSimpleFooter(),
-            ],
-          ),
+          build:
+              (context) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildSimplePDFHeader(),
+                  pw.SizedBox(height: 30),
+                  _buildSimpleOrderInfo(order),
+                  pw.SizedBox(height: 20),
+                  _buildSimpleCustomerInfo(order),
+                  pw.SizedBox(height: 20),
+                  _buildSimpleProductTable(order),
+                  pw.SizedBox(height: 20),
+                  _buildSimpleTotal(order),
+                  pw.SizedBox(height: 30),
+                  _buildSimpleFooter(),
+                ],
+              ),
         ),
       );
 
@@ -913,10 +989,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         onLayout: (PdfPageFormat format) async => pdf.save(),
         name: 'Invoice_${order.id.substring(0, 8)}.pdf',
       );
-
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      
+
       print('PDF Generation Error: $e');
       Get.snackbar(
         'Error',
@@ -931,41 +1006,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   // PDF Components
- pw.Widget _buildSimplePDFHeader() {
-  return pw.Row(
-    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-    children: [
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            'FRESH VALLEY', // Changed from YELLOW ACHAR
-            style: pw.TextStyle(
-              fontSize: 24,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.black,
+  pw.Widget _buildSimplePDFHeader() {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'FRESH VALLEY', // Changed from YELLOW ACHAR
+              style: pw.TextStyle(
+                fontSize: 24,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+              ),
             ),
-          ),
-          pw.Text('Delicious Pickles & Spices'), // You can also change this tagline if needed
-          pw.Text('WhatsApp: +923231324627'),
-        ],
-      ),
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Text(
-            'INVOICE',
-            style: pw.TextStyle(
-              fontSize: 20,
-              fontWeight: pw.FontWeight.bold,
+            pw.Text(
+              'Delicious Pickles & Spices',
+            ), // You can also change this tagline if needed
+            pw.Text('WhatsApp: +923231324627'),
+          ],
+        ),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Text(
+              'INVOICE',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
             ),
-          ),
-          pw.Text('Date: ${DateFormat('MMM dd, yyyy').format(DateTime.now())}'),
-        ],
-      ),
-    ],
-  );
-}
+            pw.Text(
+              'Date: ${DateFormat('MMM dd, yyyy').format(DateTime.now())}',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   pw.Widget _buildSimpleOrderInfo(OrderModel order) {
     return pw.Container(
@@ -978,7 +1054,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text('Order ID: #${order.id.substring(0, 8).toUpperCase()}'),
-          pw.Text('Date: ${DateFormat('MMM dd, yyyy').format(order.orderDate)}'),
+          pw.Text(
+            'Date: ${DateFormat('MMM dd, yyyy').format(order.orderDate)}',
+          ),
           pw.Text('Status: ${order.status.toUpperCase()}'),
         ],
       ),
@@ -1034,7 +1112,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             _buildSimpleTableCell(order.productName),
             _buildSimpleTableCell(order.quantity.toString()),
             _buildSimpleTableCell('Rs ${order.finalPrice.round()}'),
-            _buildSimpleTableCell('Rs ${(order.finalPrice * order.quantity).round()}'),
+            _buildSimpleTableCell(
+              'Rs ${(order.finalPrice * order.quantity).round()}',
+            ),
           ],
         ),
       ],
@@ -1100,39 +1180,37 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   pw.Widget _buildSimpleFooter() {
-  return pw.Center(
-    child: pw.Column(
-      children: [
-        pw.Text(
-          'Thank you for your order!',
-          style: pw.TextStyle(
-            fontSize: 16,
-            fontWeight: pw.FontWeight.bold,
+    return pw.Center(
+      child: pw.Column(
+        children: [
+          pw.Text(
+            'Thank you for your order!',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Text('Fresh Valley - Authentic Pakistani Pickles'), // Changed from Yellow Achar
-        pw.Text('For support: +923231324627'),
-      ],
-    ),
-  );
-}
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'Fresh Valley - Authentic Pakistani Pickles',
+          ), // Changed from Yellow Achar
+          pw.Text('For support: +923231324627'),
+        ],
+      ),
+    );
+  }
+
   void _showStatusUpdateDialog(String orderId, String currentStatus) {
     String newStatus = currentStatus;
     final List<String> statuses = [
       'pending',
-      'confirmed', 
+      'confirmed',
       'processing',
       'shipped',
       'delivered',
-      'cancelled'
+      'cancelled',
     ];
 
     Get.dialog(
       AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         title: Row(
@@ -1174,7 +1252,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
-              value: statuses.contains(currentStatus) ? currentStatus : 'pending',
+              value:
+                  statuses.contains(currentStatus) ? currentStatus : 'pending',
               decoration: InputDecoration(
                 labelText: 'New Status',
                 border: OutlineInputBorder(
@@ -1182,18 +1261,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF3B82F6),
+                    width: 2,
+                  ),
                 ),
               ),
-              items: statuses.map((status) {
-                return DropdownMenuItem(
-                  value: status,
-                  child: Text(
-                    status.toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                );
-              }).toList(),
+              items:
+                  statuses.map((status) {
+                    return DropdownMenuItem(
+                      value: status,
+                      child: Text(
+                        status.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    );
+                  }).toList(),
               onChanged: (value) {
                 if (value != null) {
                   newStatus = value;
@@ -1224,7 +1307,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ElevatedButton(
             onPressed: () async {
               Get.back();
-              
+
               Get.snackbar(
                 'Updating...',
                 'Please wait while we update the order status',
@@ -1235,9 +1318,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 margin: const EdgeInsets.all(16),
                 borderRadius: 12,
               );
-              
-              final success = await orderController.updateOrderStatus(orderId, newStatus);
-              
+
+              final success = await orderController.updateOrderStatus(
+                orderId,
+                newStatus,
+              );
+
               if (success) {
                 Get.snackbar(
                   'Success',
