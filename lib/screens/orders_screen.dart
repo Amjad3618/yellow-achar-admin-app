@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -171,8 +173,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Obx(() {
               final orders = orderController.orders;
               final totalOrders = orders.length;
-              final pendingOrders = orders.where((o) => o.status?.toLowerCase() == 'pending').length;
-              final completedOrders = orders.where((o) => o.status?.toLowerCase() == 'delivered').length;
+              final pendingOrders = orders.where((o) => o.status.toLowerCase() == 'pending').length;
+              final completedOrders = orders.where((o) => o.status.toLowerCase() == 'delivered').length;
               
               return Row(
                 children: [
@@ -367,7 +369,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       List<OrderModel> filteredOrders = orderController.orders;
       if (selectedFilter != 'all') {
         filteredOrders = orderController.orders
-            .where((order) => order.status?.toLowerCase() == selectedFilter)
+            .where((order) => order.status.toLowerCase() == selectedFilter)
             .toList();
       }
 
@@ -510,7 +512,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-                _buildStatusChip(order.status ?? 'pending'),
+                _buildStatusChip(order.status),
               ],
             ),
             
@@ -658,7 +660,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          order.customerName ?? 'Name not available',
+                          order.customerName,
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                         ),
                       ),
@@ -671,13 +673,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          order.customerPhone ?? 'Phone not available',
+                          order.customerPhone,
                           style: const TextStyle(fontSize: 13),
                         ),
                       ),
                     ],
                   ),
-                  if (order.customerAddress != null && order.customerAddress!.isNotEmpty) ...[
+                  // ignore: unnecessary_null_comparison
+                  if (order.customerAddress != null && order.customerAddress.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,7 +689,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            order.customerAddress!,
+                            order.customerAddress,
                             style: const TextStyle(fontSize: 13),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -756,7 +759,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           color: Color(0xFF3B82F6),
                           size: 20,
                         ),
-                        onPressed: () => _showStatusUpdateDialog(order.id, order.status ?? 'pending'),
+                        onPressed: () => _showStatusUpdateDialog(order.id, order.status),
                         tooltip: 'Update Status',
                       ),
                     ),
@@ -976,7 +979,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         children: [
           pw.Text('Order ID: #${order.id.substring(0, 8).toUpperCase()}'),
           pw.Text('Date: ${DateFormat('MMM dd, yyyy').format(order.orderDate)}'),
-          pw.Text('Status: ${(order.status ?? 'Pending').toUpperCase()}'),
+          pw.Text('Status: ${order.status.toUpperCase()}'),
         ],
       ),
     );
@@ -998,10 +1001,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 8),
-          pw.Text('Name: ${order.customerName ?? "N/A"}'),
-          pw.Text('Phone: ${order.customerPhone ?? "N/A"}'),
-          pw.Text('Email: ${order.customerEmail ?? "N/A"}'),
-          pw.Text('Address: ${order.customerAddress ?? "N/A"}'),
+          pw.Text('Name: ${order.customerName}'),
+          pw.Text('Phone: ${order.customerPhone}'),
+          pw.Text('Email: ${order.customerEmail}'),
+          pw.Text('Address: ${order.customerAddress}'),
         ],
       ),
     );
@@ -1028,7 +1031,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
         pw.TableRow(
           children: [
-            _buildSimpleTableCell(order.productName ?? 'Unknown'),
+            _buildSimpleTableCell(order.productName),
             _buildSimpleTableCell(order.quantity.toString()),
             _buildSimpleTableCell('Rs ${order.finalPrice.round()}'),
             _buildSimpleTableCell('Rs ${(order.finalPrice * order.quantity).round()}'),
@@ -1066,7 +1069,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Subtotal:'),
-                pw.Text('Rs ${order.subtotal?.round() ?? (order.finalPrice * order.quantity).round()}'),
+                pw.Text('Rs ${order.subtotal.round()}'),
               ],
             ),
             pw.Row(
