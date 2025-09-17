@@ -152,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
-                childAspectRatio: 1.1, // Increased for more height
+                childAspectRatio: 1, // Increased for more height
                 children: [
                   _buildActionCard(
                     icon: Icons.shopping_cart_checkout_rounded,

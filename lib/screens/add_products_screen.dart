@@ -118,12 +118,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ),
                               ),
                               Text(
-                                'Price: \$${product.price.toStringAsFixed(2)}',
+                                'Price: Rs${product.price.toStringAsFixed(2)}',
                                 style: const TextStyle(fontSize: 16),
                               ),
                               if (product.hasDiscount)
                                 Text(
-                                  'Discount: \$${product.discountPrice!.toStringAsFixed(2)} (${product.discountPercentage.toStringAsFixed(0)}% off)',
+                                  'Discount: Rs${product.discountPrice!.toStringAsFixed(2)} (${product.discountPercentage.toStringAsFixed(0)}% off)',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.green[700],
