@@ -1030,7 +1030,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
 
-      print('PDF Generation Error: $e');
       Get.snackbar(
         'Error',
         'Failed to generate invoice. Please try again.',
