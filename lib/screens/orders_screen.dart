@@ -96,7 +96,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
       if (orderController.orders.isEmpty) {
         print('DEBUG: No user orders found, trying to load all orders');
         await orderController.getAllOrders();
-        print('DEBUG: All orders loaded. Count: ${orderController.orders.length}');
+        print(
+          'DEBUG: All orders loaded. Count: ${orderController.orders.length}',
+        );
       }
     } catch (e) {
       print('DEBUG: Error loading orders: $e');
@@ -115,7 +117,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   // Group orders by user ID and order time (within 5 minutes)
   List<GroupedOrder> _groupOrders(List<OrderModel> orders) {
     Map<String, List<OrderModel>> groupedMap = {};
-    
+
     for (var order in orders) {
       // Create a group key based on userId and order time (rounded to 5-minute intervals)
       final orderTime = order.orderDate;
@@ -126,9 +128,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         orderTime.hour,
         (orderTime.minute ~/ 5) * 5, // Round to 5-minute intervals
       );
-      
+
       final groupKey = '${order.userId}_${roundedTime.millisecondsSinceEpoch}';
-      
+
       if (!groupedMap.containsKey(groupKey)) {
         groupedMap[groupKey] = [];
       }
@@ -137,38 +139,49 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     // Convert to GroupedOrder objects
     List<GroupedOrder> groupedOrders = [];
-    
+
     groupedMap.forEach((groupKey, orderList) {
       if (orderList.isNotEmpty) {
         final firstOrder = orderList.first;
-        final totalAmount = orderList.fold(0.0, (sum, order) => sum + order.totalAmount);
-        
+        final totalAmount = orderList.fold(
+          0.0,
+          (sum, order) => sum + order.totalAmount,
+        );
+
         // Determine group status (prioritize pending/processing over completed)
         String groupStatus = 'delivered';
         if (orderList.any((o) => o.status.toLowerCase() == 'pending')) {
           groupStatus = 'pending';
-        } else if (orderList.any((o) => o.status.toLowerCase() == 'processing')) {
+        } else if (orderList.any(
+          (o) => o.status.toLowerCase() == 'processing',
+        )) {
           groupStatus = 'processing';
-        } else if (orderList.any((o) => o.status.toLowerCase() == 'confirmed')) {
+        } else if (orderList.any(
+          (o) => o.status.toLowerCase() == 'confirmed',
+        )) {
           groupStatus = 'confirmed';
         } else if (orderList.any((o) => o.status.toLowerCase() == 'shipped')) {
           groupStatus = 'shipped';
-        } else if (orderList.any((o) => o.status.toLowerCase() == 'cancelled')) {
+        } else if (orderList.any(
+          (o) => o.status.toLowerCase() == 'cancelled',
+        )) {
           groupStatus = 'cancelled';
         }
 
-        groupedOrders.add(GroupedOrder(
-          groupId: groupKey,
-          userId: firstOrder.userId,
-          orders: orderList,
-          orderDate: firstOrder.orderDate,
-          customerName: firstOrder.customerName,
-          customerPhone: firstOrder.customerPhone,
-          customerEmail: firstOrder.customerEmail,
-          customerAddress: firstOrder.customerAddress,
-          totalAmount: totalAmount,
-          status: groupStatus,
-        ));
+        groupedOrders.add(
+          GroupedOrder(
+            groupId: groupKey,
+            userId: firstOrder.userId,
+            orders: orderList,
+            orderDate: firstOrder.orderDate,
+            customerName: firstOrder.customerName,
+            customerPhone: firstOrder.customerPhone,
+            customerEmail: firstOrder.customerEmail,
+            customerAddress: firstOrder.customerAddress,
+            totalAmount: totalAmount,
+            status: groupStatus,
+          ),
+        );
       }
     });
 
@@ -213,23 +226,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   selectedFilter = value;
                 });
               },
-              itemBuilder: (context) => filterOptions.map((filter) {
-                return PopupMenuItem(
-                  value: filter,
-                  child: Row(
-                    children: [
-                      if (selectedFilter == filter)
-                        const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: Color(0xFF3B82F6),
-                        ),
-                      if (selectedFilter == filter) const SizedBox(width: 8),
-                      Text(filter.toUpperCase()),
-                    ],
-                  ),
-                );
-              }).toList(),
+              itemBuilder:
+                  (context) =>
+                      filterOptions.map((filter) {
+                        return PopupMenuItem(
+                          value: filter,
+                          child: Row(
+                            children: [
+                              if (selectedFilter == filter)
+                                const Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Color(0xFF3B82F6),
+                                ),
+                              if (selectedFilter == filter)
+                                const SizedBox(width: 8),
+                              Text(filter.toUpperCase()),
+                            ],
+                          ),
+                        );
+                      }).toList(),
             ),
           ),
           // Refresh Button
@@ -274,12 +290,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Obx(() {
               final groupedOrders = _groupOrders(orderController.orders);
               final totalOrders = groupedOrders.length;
-              final pendingOrders = groupedOrders
-                  .where((o) => o.status.toLowerCase() == 'pending')
-                  .length;
-              final completedOrders = groupedOrders
-                  .where((o) => o.status.toLowerCase() == 'delivered')
-                  .length;
+              final pendingOrders =
+                  groupedOrders
+                      .where((o) => o.status.toLowerCase() == 'pending')
+                      .length;
+              final completedOrders =
+                  groupedOrders
+                      .where((o) => o.status.toLowerCase() == 'delivered')
+                      .length;
 
               return Row(
                 children: [
@@ -317,15 +335,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
           // Orders List
           Expanded(child: _buildOrdersList()),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showDebugInfo();
-        },
-        backgroundColor: const Color(0xFF6366F1),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.bug_report_rounded),
-        label: const Text('Debug'),
       ),
     );
   }
@@ -381,17 +390,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
           await orderController.getAllOrders();
         }
       }
-
-      Get.snackbar(
-        'Refreshed',
-        'Orders updated successfully',
-        backgroundColor: const Color(0xFF10B981),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 2),
-      );
     } catch (e) {
       print('DEBUG: Refresh error: $e');
       Get.snackbar(
@@ -404,46 +402,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         borderRadius: 12,
       );
     }
-  }
-
-  void _showDebugInfo() {
-    final userId = orderController.getCurrentUserId();
-    final ordersCount = orderController.orders.length;
-    final groupedCount = _groupOrders(orderController.orders).length;
-    final isLoading = orderController.isLoading.value;
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Debug Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('User ID: ${userId ?? "Not logged in"}'),
-            Text('Raw Orders Count: $ordersCount'),
-            Text('Grouped Orders Count: $groupedCount'),
-            Text('Is Loading: $isLoading'),
-            Text('Controller: ${orderController.runtimeType}'),
-            const SizedBox(height: 16),
-            const Text('Troubleshooting Steps:'),
-            const Text('1. Check if user is authenticated'),
-            const Text('2. Verify database connection'),
-            const Text('3. Check getUserOrders() method'),
-            const Text('4. Try getAllOrders() method'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              orderController.getAllOrders();
-            },
-            child: const Text('Load All Orders'),
-          ),
-          TextButton(onPressed: () => Get.back(), child: const Text('Close')),
-        ],
-      ),
-    );
   }
 
   Widget _buildOrdersList() {
@@ -476,15 +434,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
       // Filter grouped orders based on selected filter
       if (selectedFilter != 'all') {
-        groupedOrders = groupedOrders.where((groupedOrder) {
-          final status = groupedOrder.status.toLowerCase();
-          
-          if (selectedFilter == 'completed') {
-            return status == 'delivered' || status == 'completed';
-          }
-          
-          return status == selectedFilter;
-        }).toList();
+        groupedOrders =
+            groupedOrders.where((groupedOrder) {
+              final status = groupedOrder.status.toLowerCase();
+
+              if (selectedFilter == 'completed') {
+                return status == 'delivered' || status == 'completed';
+              }
+
+              return status == selectedFilter;
+            }).toList();
       }
 
       if (groupedOrders.isEmpty) {
@@ -552,22 +511,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    OutlinedButton.icon(
-                      onPressed: _showDebugInfo,
-                      icon: const Icon(Icons.info_outline_rounded),
-                      label: const Text('Debug'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF64748B),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -591,8 +534,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildGroupedOrderCard(GroupedOrder groupedOrder) {
-    final totalItems = groupedOrder.orders.fold(0, (sum, order) => sum + order.quantity);
-    
+    final totalItems = groupedOrder.orders.fold(
+      0,
+      (sum, order) => sum + order.quantity,
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -632,7 +578,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       Row(
                         children: [
                           Text(
-                            DateFormat('MMM dd, yyyy • hh:mm a').format(groupedOrder.orderDate),
+                            DateFormat(
+                              'MMM dd, yyyy • hh:mm a',
+                            ).format(groupedOrder.orderDate),
                             style: const TextStyle(
                               color: Color(0xFF64748B),
                               fontSize: 13,
@@ -641,7 +589,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                           const SizedBox(width: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF8B5CF6).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
@@ -686,7 +637,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...groupedOrder.orders.map((order) => _buildProductRow(order)).toList(),
+                  ...groupedOrder.orders
+                      .map((order) => _buildProductRow(order))
+                      .toList(),
                 ],
               ),
             ),
@@ -715,12 +668,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.person_rounded, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.person_rounded,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           groupedOrder.customerName,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -728,7 +688,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.phone_rounded, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.phone_rounded,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -743,7 +707,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF64748B)),
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 16,
+                          color: Color(0xFF64748B),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -852,33 +820,34 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: order.productImage.isNotEmpty
-                  ? Image.network(
-                      order.productImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: const Color(0xFFF1F5F9),
-                          child: const Icon(
-                            Icons.image_not_supported_rounded,
-                            color: Color(0xFF94A3B8),
-                            size: 20,
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: const Color(0xFFF1F5F9),
-                      child: const Icon(
-                        Icons.shopping_bag_rounded,
-                        color: Color(0xFF94A3B8),
-                        size: 20,
+              child:
+                  order.productImage.isNotEmpty
+                      ? Image.network(
+                        order.productImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: const Color(0xFFF1F5F9),
+                            child: const Icon(
+                              Icons.image_not_supported_rounded,
+                              color: Color(0xFF94A3B8),
+                              size: 20,
+                            ),
+                          );
+                        },
+                      )
+                      : Container(
+                        color: const Color(0xFFF1F5F9),
+                        child: const Icon(
+                          Icons.shopping_bag_rounded,
+                          color: Color(0xFF94A3B8),
+                          size: 20,
+                        ),
                       ),
-                    ),
             ),
           ),
           const SizedBox(width: 12),
-          
+
           // Product Details
           Expanded(
             child: Column(
@@ -1005,19 +974,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
-          build: (context) => [
-            _buildGroupedPDFHeader(),
-            pw.SizedBox(height: 30),
-            _buildGroupedOrderInfo(groupedOrder),
-            pw.SizedBox(height: 20),
-            _buildGroupedCustomerInfo(groupedOrder),
-            pw.SizedBox(height: 20),
-            _buildGroupedProductTable(groupedOrder),
-            pw.SizedBox(height: 20),
-            _buildGroupedTotal(groupedOrder),
-            pw.SizedBox(height: 30),
-            _buildGroupedFooter(),
-          ],
+          build:
+              (context) => [
+                _buildGroupedPDFHeader(),
+                pw.SizedBox(height: 30),
+                _buildGroupedOrderInfo(groupedOrder),
+                pw.SizedBox(height: 20),
+                _buildGroupedCustomerInfo(groupedOrder),
+                pw.SizedBox(height: 20),
+                _buildGroupedTotal(groupedOrder),
+                pw.SizedBox(height: 30),
+                _buildGroupedProductTable(groupedOrder),
+                pw.SizedBox(height: 30),
+                _buildGroupedFooter(),
+              ],
         ),
       );
 
@@ -1058,8 +1028,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 color: PdfColors.black,
               ),
             ),
-            pw.Text('Delicious Pickles & Spices'),
-            pw.Text('WhatsApp: +9203091336378'),
+            pw.Text('WhatsApp: +923091336378'),
           ],
         ),
         pw.Column(
@@ -1088,11 +1057,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text('Order ID: #${groupedOrder.groupId.substring(0, 8).toUpperCase()}'),
+          pw.Text(
+            'Order ID: #${groupedOrder.groupId.substring(0, 8).toUpperCase()}',
+          ),
           pw.Text(
             'Date: ${DateFormat('MMM dd, yyyy').format(groupedOrder.orderDate)}',
           ),
-          pw.Text('Status: ${groupedOrder.status.toUpperCase()}'),
         ],
       ),
     );
@@ -1111,13 +1081,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
         children: [
           pw.Text(
             'CUSTOMER DETAILS',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold,fontSize: 20),
           ),
           pw.SizedBox(height: 8),
-          pw.Text('Name: ${groupedOrder.customerName}'),
-          pw.Text('Phone: ${groupedOrder.customerPhone}'),
-          pw.Text('Email: ${groupedOrder.customerEmail}'),
-          pw.Text('Address: ${groupedOrder.customerAddress}'),
+          pw.Text(
+            'Name: ${groupedOrder.customerName}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold,fontSize: 18),
+          ),
+          pw.Text('Phone: ${groupedOrder.customerPhone}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold,fontSize: 18),),
+          pw.Text('Email: ${groupedOrder.customerEmail}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold,fontSize: 18),),
+          pw.Text('Address: ${groupedOrder.customerAddress}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold,fontSize: 15),),
         ],
       ),
     );
@@ -1142,16 +1118,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
             _buildGroupedTableCell('Total', isHeader: true),
           ],
         ),
-        ...groupedOrder.orders.map((order) => pw.TableRow(
-          children: [
-            _buildGroupedTableCell(order.productName),
-            _buildGroupedTableCell(order.quantity.toString()),
-            _buildGroupedTableCell('Rs ${order.finalPrice.round()}'),
-            _buildGroupedTableCell(
-              'Rs ${(order.finalPrice * order.quantity).round()}',
-            ),
-          ],
-        )).toList(),
+        ...groupedOrder.orders
+            .map(
+              (order) => pw.TableRow(
+                children: [
+                  _buildGroupedTableCell(order.productName),
+                  _buildGroupedTableCell(order.quantity.toString()),
+                  _buildGroupedTableCell('Rs ${order.finalPrice.round()}'),
+                  _buildGroupedTableCell(
+                    'Rs ${(order.finalPrice * order.quantity).round()}',
+                  ),
+                ],
+              ),
+            )
+            .toList(),
       ],
     );
   }
@@ -1169,9 +1149,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   pw.Widget _buildGroupedTotal(GroupedOrder groupedOrder) {
-    final subtotal = groupedOrder.orders.fold(0.0, (sum, order) => sum + (order.finalPrice * order.quantity));
+    final subtotal = groupedOrder.orders.fold(
+      0.0,
+      (sum, order) => sum + (order.finalPrice * order.quantity),
+    );
     final delivery = groupedOrder.totalAmount > 1000 ? 0 : 150;
-    
+
     return pw.Align(
       alignment: pw.Alignment.centerRight,
       child: pw.Container(
@@ -1192,10 +1175,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Delivery:'),
-                pw.Text('Rs $delivery'),
-              ],
+              children: [pw.Text('Delivery:'), pw.Text('Rs $delivery')],
             ),
             pw.Divider(),
             pw.Row(
@@ -1289,14 +1269,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
             const SizedBox(height: 8),
             Text(
               '${groupedOrder.orders.length} products will be updated',
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
-              value: statuses.contains(groupedOrder.status) ? groupedOrder.status : 'pending',
+              value:
+                  statuses.contains(groupedOrder.status)
+                      ? groupedOrder.status
+                      : 'pending',
               decoration: InputDecoration(
                 labelText: 'New Status',
                 border: OutlineInputBorder(
@@ -1310,15 +1290,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ),
               ),
-              items: statuses.map((status) {
-                return DropdownMenuItem(
-                  value: status,
-                  child: Text(
-                    status.toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                );
-              }).toList(),
+              items:
+                  statuses.map((status) {
+                    return DropdownMenuItem(
+                      value: status,
+                      child: Text(
+                        status.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    );
+                  }).toList(),
               onChanged: (value) {
                 if (value != null) {
                   newStatus = value;

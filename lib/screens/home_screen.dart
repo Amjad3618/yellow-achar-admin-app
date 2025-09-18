@@ -35,33 +35,61 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchCollectionCounts();
   }
 
-  // Method to fetch collection counts
+  // Improved method to fetch collection counts
   Future<void> _fetchCollectionCounts() async {
     try {
+      print('Starting to fetch collection counts...');
+      
       setState(() {
         isLoadingCounts = true;
       });
 
-      // Fetch products count
-      final productsSnapshot = await _firestore.collection('products').get();
-      
-      // Fetch categories count
-      final categoriesSnapshot = await _firestore.collection('categories').get();
-      
-      // Fetch orders count
-      final ordersSnapshot = await _firestore.collection('Orders').get();
+      // Use Future.wait to fetch all counts simultaneously for better performance
+      final results = await Future.wait([
+        _firestore.collection('products').get(),
+        _firestore.collection('categories').get(), 
+        _firestore.collection('Orders').get(), // Make sure collection name is correct
+      ]);
 
-      setState(() {
-        productsCount = productsSnapshot.docs.length;
-        categoriesCount = categoriesSnapshot.docs.length;
-        ordersCount = ordersSnapshot.docs.length;
-        isLoadingCounts = false;
-      });
+      final productsSnapshot = results[0];
+      final categoriesSnapshot = results[1];
+      final ordersSnapshot = results[2];
+
+      // Debug prints to check if data is being fetched
+      print('Products count: ${productsSnapshot.docs.length}');
+      print('Categories count: ${categoriesSnapshot.docs.length}');
+      print('Orders count: ${ordersSnapshot.docs.length}');
+
+      if (mounted) {
+        setState(() {
+          productsCount = productsSnapshot.docs.length;
+          categoriesCount = categoriesSnapshot.docs.length;
+          ordersCount = ordersSnapshot.docs.length;
+          isLoadingCounts = false;
+        });
+        print('State updated successfully');
+      }
+
     } catch (e) {
       print('Error fetching collection counts: $e');
-      setState(() {
-        isLoadingCounts = false;
-      });
+      
+      if (mounted) {
+        setState(() {
+          productsCount = 0;
+          categoriesCount = 0;
+          ordersCount = 0;
+          isLoadingCounts = false;
+        });
+
+        // Show error message to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -200,12 +228,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisCount: 2,
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
-                  childAspectRatio: 1, // Increased for more height
+                  childAspectRatio: 1.1, // Increased for more height
                   children: [
                     _buildActionCard(
                       icon: Icons.shopping_cart_checkout_rounded,
-                      title: "Orders",
-                      subtitle: "View & manage",
+                      title: "Check Orders",
+                      subtitle: "View recent orders",
                       color: const Color(0xFF3B82F6),
                       onTap: () => Get.to(() => OrdersScreen()),
                     ),
@@ -235,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 40),
 
-                // Statistics Section
+                // Statistics Section - Improved
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -284,48 +312,77 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                               ),
+                            )
+                          else
+                            IconButton(
+                              onPressed: _fetchCollectionCounts,
+                              icon: const Icon(Icons.refresh_rounded),
+                              color: AppColors.primaryColor,
+                              iconSize: 20,
+                              tooltip: 'Refresh Data',
                             ),
                         ],
                       ),
                       const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatItem(
-                              "Products",
-                              isLoadingCounts ? "..." : productsCount.toString(),
-                              Icons.inventory_2_rounded,
-                              const Color(0xFF10B981),
+                      
+                      // Show different content based on loading state
+                      isLoadingCounts
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Loading store data...',
+                                    style: TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatItem(
+                                  "Products",
+                                  productsCount.toString(),
+                                  Icons.inventory_2_rounded,
+                                  const Color(0xFF10B981),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 60,
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                              Expanded(
+                                child: _buildStatItem(
+                                  "Categories",
+                                  categoriesCount.toString(),
+                                  Icons.category_rounded,
+                                  const Color(0xFF8B5CF6),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 60,
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                              Expanded(
+                                child: _buildStatItem(
+                                  "Orders",
+                                  ordersCount.toString(),
+                                  Icons.shopping_bag_rounded,
+                                  const Color(0xFF3B82F6),
+                                ),
+                              ),
+                            ],
                           ),
-                          Container(
-                            width: 1,
-                            height: 60,
-                            color: const Color(0xFFE2E8F0),
-                          ),
-                          Expanded(
-                            child: _buildStatItem(
-                              "Categories",
-                              isLoadingCounts ? "..." : categoriesCount.toString(),
-                              Icons.category_rounded,
-                              const Color(0xFF8B5CF6),
-                            ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 60,
-                            color: const Color(0xFFE2E8F0),
-                          ),
-                          Expanded(
-                            child: _buildStatItem(
-                              "Orders",
-                              isLoadingCounts ? "..." : ordersCount.toString(),
-                              Icons.shopping_bag_rounded,
-                              const Color(0xFF3B82F6),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -339,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Fixed Action Card Widget
   Widget _buildActionCard({
     required IconData icon,
     required String title,
@@ -367,43 +425,46 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Icon container
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: color, size: 18),
               ),
 
-              const SizedBox(height: 12),
-
-              // Text content with flexible layout
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CustomText(
-                      title,
-                      fontSize: 15,
+              // Text content with constrained height
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                      maxLines: 1,
+                      color: Color(0xFF1E293B),
                     ),
-                    const SizedBox(height: 2),
-                    CustomText(
-                      subtitle,
-                      fontSize: 11,
-                      color: const Color(0xFF64748B),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF64748B),
                       fontWeight: FontWeight.w400,
-                      maxLines: 1,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ],
           ),
